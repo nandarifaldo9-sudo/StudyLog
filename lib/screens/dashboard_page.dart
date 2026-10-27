@@ -1,14 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/draft_keys.dart';
 import '../data/jadwal.dart';
 import '../models/catatan.dart';
+import '../state/catatan_store.dart';
 import '../theme/warna_mata_kuliah.dart';
 import '../widgets/catatan_card.dart';
 import '../widgets/mata_kuliah_card.dart';
+import 'daftar_catatan_page.dart';
+import 'detail_catatan_page.dart';
 import 'tambah_catatan_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -22,7 +26,6 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage>
     with WidgetsBindingObserver {
-  final List<HasilCatatan> _daftarHasil = [];
   Set<String> _adaDraft = {};
 
   late DateTime _sekarang;
@@ -88,9 +91,10 @@ class _DashboardPageState extends State<DashboardPage>
     setState(() => _adaDraft = ada);
   }
 
-  /// Membuka form untuk mata kuliah terpilih dan menunggu hasilnya.
+  /// Navigator.push -> Form. Form menyimpan ke CatatanStore sendiri,
+  /// lalu mengembalikan true jika catatan berhasil disimpan.
   Future<void> _bukaForm(JadwalKuliah jadwal) async {
-    final hasil = await Navigator.push<HasilCatatan>(
+    final tersimpan = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => TambahCatatanPage(
@@ -101,8 +105,7 @@ class _DashboardPageState extends State<DashboardPage>
       ),
     );
     if (!mounted) return;
-    if (hasil != null) {
-      setState(() => _daftarHasil.insert(0, hasil)); // terbaru di atas
+    if (tersimpan == true) {
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
@@ -110,6 +113,22 @@ class _DashboardPageState extends State<DashboardPage>
       );
     }
     await _muatStatusDraft();
+  }
+
+  /// Navigator.push -> Daftar semua catatan.
+  void _bukaDaftar() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DaftarCatatanPage()),
+    );
+  }
+
+  /// Navigator.push -> Detail sebuah catatan.
+  void _bukaDetail(HasilCatatan catatan) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => DetailCatatanPage(catatan: catatan)),
+    );
   }
 
   Widget _infoHari(int jumlahMataKuliah) {
@@ -185,12 +204,14 @@ class _DashboardPageState extends State<DashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    // watch: dashboard dibangun ulang setiap CatatanStore memanggil
+    // notifyListeners() (tambah / ubah / hapus dari layar mana pun).
+    final store = context.watch<CatatanStore>();
     final jadwalHariIni = _jadwalHariIni;
     final namaHariIni = jadwalHariIni.map((j) => j.nama).toList();
     final berlangsung = _kuliahBerlangsung;
-    final catatanHariIni = _daftarHasil
-        .where((h) => namaHariIni.contains(h.mataKuliah))
-        .toList();
+    final catatanHariIni =
+        store.semua.where((h) => namaHariIni.contains(h.mataKuliah)).toList();
     final judul = Theme.of(context).textTheme.titleMedium;
 
     return Scaffold(
@@ -201,6 +222,12 @@ class _DashboardPageState extends State<DashboardPage>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _infoHari(jadwalHariIni.length),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _bukaDaftar,
+              icon: const Icon(Icons.list_alt),
+              label: const Text('LIHAT SEMUA CATATAN'),
+            ),
             if (berlangsung != null) _kartuSekarang(berlangsung),
             const SizedBox(height: 16),
             Text('Mata kuliah hari ini', style: judul),
@@ -221,9 +248,7 @@ class _DashboardPageState extends State<DashboardPage>
                 MataKuliahCard(
                   jadwal: j,
                   status: statusKuliah(j, _sekarang),
-                  jumlahCatatan: _daftarHasil
-                      .where((h) => h.mataKuliah == j.nama)
-                      .length,
+                  jumlahCatatan: store.jumlahUntuk(j.nama),
                   adaDraft: _adaDraft.contains(j.nama),
                   onTambah: () => _bukaForm(j),
                 ),
@@ -236,7 +261,11 @@ class _DashboardPageState extends State<DashboardPage>
                   'Belum ada catatan. Tekan TAMBAH CATATAN pada mata kuliah.',
                 )
               else
-                for (final hasil in catatanHariIni) CatatanCard(data: hasil),
+                for (final hasil in catatanHariIni)
+                  CatatanCard(
+                    data: hasil,
+                    onTap: () => _bukaDetail(hasil),
+                  ),
             ],
           ],
         ),

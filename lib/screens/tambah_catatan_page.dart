@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/draft_keys.dart';
 import '../data/jadwal.dart';
 import '../models/catatan.dart';
+import '../state/catatan_store.dart';
 import '../theme/warna_mata_kuliah.dart';
 
 class TambahCatatanPage extends StatefulWidget {
@@ -14,11 +16,15 @@ class TambahCatatanPage extends StatefulWidget {
   final String? jam;
   final DateTime Function()? now;
 
+  /// Jika diisi, form berjalan dalam mode UBAH (tanpa draft).
+  final HasilCatatan? catatanAwal;
+
   const TambahCatatanPage({
     super.key,
     required this.mataKuliah,
     this.jam,
     this.now,
+    this.catatanAwal,
   });
 
   @override
@@ -35,15 +41,22 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
   bool _sedangMemulihkan = false;
   Timer? _debounce;
 
+  bool get _modeUbah => widget.catatanAwal != null;
+
   DateTime _now() => (widget.now ?? DateTime.now)();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _judul.addListener(_jadwalkanSimpanDraft);
-    _isi.addListener(_jadwalkanSimpanDraft);
-    _muatDraft();
+    if (_modeUbah) {
+      _judul.text = widget.catatanAwal!.judul;
+      _isi.text = widget.catatanAwal!.isi;
+    } else {
+      _judul.addListener(_jadwalkanSimpanDraft);
+      _isi.addListener(_jadwalkanSimpanDraft);
+      _muatDraft();
+    }
   }
 
   @override
@@ -61,6 +74,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_modeUbah) return;
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
       _debounce?.cancel();
@@ -91,6 +105,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
   }
 
   Future<void> _simpanDraft() async {
+    if (_modeUbah) return; // mode ubah tidak memakai draft
     // Ambil nilai dulu sebelum await agar aman jika widget sudah ditutup.
     final mk = widget.mataKuliah;
     final judul = _judul.text;
@@ -142,15 +157,24 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
       return;
     }
 
-    final hasil = HasilCatatan(
+    final store = context.read<CatatanStore>();
+    final judul = _judul.text.trim();
+    final isi = _isi.text.trim();
+
+    if (_modeUbah) {
+      store.ubah(widget.catatanAwal!.id, judul: judul, isi: isi);
+      Navigator.pop(context, true);
+      return;
+    }
+
+    store.tambah(
       mataKuliah: widget.mataKuliah,
-      judul: _judul.text.trim(),
-      isi: _isi.text.trim(),
+      judul: judul,
+      isi: isi,
       waktu: _now(),
     );
-
     _kosongkanForm(); // form bersih + draft dihapus
-    Navigator.pop(context, hasil); // kirim hasil ke dashboard
+    Navigator.pop(context, true); // beri tahu pemanggil: berhasil disimpan
   }
 
   // ----------------------------- UI ----------------------------------------
@@ -158,6 +182,14 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
   Widget _headerMataKuliah() {
     final warna = warnaUntuk(widget.mataKuliah);
     final hari = namaHari[_now().weekday - 1];
+    final String subjudul;
+    if (_modeUbah) {
+      subjudul = 'Mengubah catatan';
+    } else if (widget.jam == null) {
+      subjudul = 'Kuliah hari $hari';
+    } else {
+      subjudul = 'Kuliah hari $hari • ${widget.jam}';
+    }
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -181,9 +213,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
                   ),
                 ),
                 Text(
-                  widget.jam == null
-                      ? 'Kuliah hari $hari'
-                      : 'Kuliah hari $hari • ${widget.jam}',
+                  subjudul,
                   style: const TextStyle(color: Colors.white70),
                 ),
               ],
@@ -213,7 +243,9 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tambah Catatan')),
+      appBar: AppBar(
+        title: Text(_modeUbah ? 'Ubah Catatan' : 'Tambah Catatan'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -238,11 +270,11 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _isi,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Isi catatan',
-                      helperText: 'Draft tersimpan otomatis',
+                      helperText: _modeUbah ? null : 'Draft tersimpan otomatis',
                       alignLabelWithHint: true,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     minLines: 3,
                     maxLines: 5,
@@ -253,7 +285,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: _simpan,
-                      child: const Text('SIMPAN'),
+                      child: Text(_modeUbah ? 'SIMPAN PERUBAHAN' : 'SIMPAN'),
                     ),
                   ),
                 ],
