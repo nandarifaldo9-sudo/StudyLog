@@ -56,8 +56,22 @@ class DetailCatatanPage extends StatelessWidget {
 
     final store = context.read<CatatanStore>();
     final messenger = ScaffoldMessenger.of(context);
-    Navigator.pop(context); // kembali ke layar sebelumnya (back stack)
-    store.hapus(c.id);
+    final navigator = Navigator.of(context);
+
+    try {
+      await store.hapus(c.id); // hapus baris di SQLite, lalu perbarui daftar
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus: $e'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      return;
+    }
+
+    if (context.mounted) navigator.pop(); // kembali ke layar sebelumnya
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       const SnackBar(content: Text('Catatan dihapus')),

@@ -39,6 +39,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
 
   bool _draftDipulihkan = false;
   bool _sedangMemulihkan = false;
+  bool _menyimpan = false; // mencegah SIMPAN ganda saat menulis ke SQLite
   Timer? _debounce;
 
   bool get _modeUbah => widget.catatanAwal != null;
@@ -143,10 +144,14 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
     return null;
   }
 
-  /// Event: tombol SIMPAN ditekan.
-  void _simpan() {
+  /// Event: tombol SIMPAN ditekan. Menulis ke SQLite (async) lewat store.
+  Future<void> _simpan() async {
+    if (_menyimpan) return;
+    final store = context.read<CatatanStore>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     if (!_formKey.currentState!.validate()) {
-      final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
@@ -157,24 +162,38 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
       return;
     }
 
-    final store = context.read<CatatanStore>();
     final judul = _judul.text.trim();
     final isi = _isi.text.trim();
 
-    if (_modeUbah) {
-      store.ubah(widget.catatanAwal!.id, judul: judul, isi: isi);
-      Navigator.pop(context, true);
-      return;
-    }
+    setState(() => _menyimpan = true);
+    try {
+      if (_modeUbah) {
+        await store.ubah(widget.catatanAwal!.id, judul: judul, isi: isi);
+        if (!mounted) return;
+        navigator.pop(true);
+        return;
+      }
 
-    store.tambah(
-      mataKuliah: widget.mataKuliah,
-      judul: judul,
-      isi: isi,
-      waktu: _now(),
-    );
-    _kosongkanForm(); // form bersih + draft dihapus
-    Navigator.pop(context, true); // beri tahu pemanggil: berhasil disimpan
+      await store.tambah(
+        mataKuliah: widget.mataKuliah,
+        judul: judul,
+        isi: isi,
+        waktu: _now(),
+      );
+      if (!mounted) return;
+      _kosongkanForm(); // form bersih + draft dihapus
+      navigator.pop(true); // beri tahu pemanggil: berhasil disimpan
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _menyimpan = false);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $e'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
   }
 
   // ----------------------------- UI ----------------------------------------
@@ -284,7 +303,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _simpan,
+                      onPressed: _menyimpan ? null : _simpan,
                       child: Text(_modeUbah ? 'SIMPAN PERUBAHAN' : 'SIMPAN'),
                     ),
                   ),

@@ -1,56 +1,55 @@
-# StudyLog — Milestone 1: Dashboard Jadwal dan Formulir Catatan
+# StudyLog — Milestone 3: Penyimpanan SQLite dan CRUD
 
-Aplikasi catatan perkuliahan Android yang dibangun dengan **Flutter**. Repository ini berisi **Checkpoint Milestone 1 (M1)** proyek StudyLog: form interaktif dengan input, validasi, `setState`, dan umpan balik pengguna, yang dipadukan dengan **dashboard berbasis jadwal kuliah hari ini**.
+Aplikasi catatan perkuliahan Android (Flutter). M3 mengganti penyimpanan di memori (M2)
+dengan **SQLite**, sehingga catatan **tetap ada setelah aplikasi ditutup**. Dashboard jadwal,
+navigasi 4 layar, validasi, dan draft otomatis dari M1/M2 tidak diubah.
 
-> Tugas UTS kelompok — Program Studi Informatika, Universitas Mulia
-> Mata kuliah: Pemrograman Aplikasi Bergerak
+> Program Studi Informatika, Universitas Mulia — Pemrograman Aplikasi Bergerak
 
----
-## Fitur
+## Yang berubah dari M2
 
-### Dashboard
-- Menampilkan **hanya mata kuliah yang berlangsung hari ini**, mengikuti hari pada perangkat secara real time, lengkap dengan **kode mata kuliah dan jam kuliah**.
-- Info hari, tanggal, dan jam yang diperbarui setiap menit dan saat aplikasi dibuka kembali.
-- **Status kuliah otomatis** pada setiap card: *Akan datang*, *Sedang berlangsung*, atau *Selesai*, mengikuti jam saat ini.
-- **Kartu "Kuliah saat ini"** dengan tombol **CATAT SEKARANG** yang langsung membuka form untuk mata kuliah yang sedang berlangsung, tanpa perlu memilih.
-- Setiap mata kuliah punya **card dengan warna khas**, jumlah catatan, dan tombol **TAMBAH CATATAN** (tetap bisa dipakai untuk mata kuliah hari ini yang belum atau sudah selesai).
-- Penanda **"Ada draft"** pada mata kuliah yang masih punya catatan belum selesai.
-- Daftar **catatan hari ini** (terbaru di atas) dengan warna sesuai mata kuliahnya.
-- Pada **Sabtu dan Minggu** tidak ada jadwal, sehingga dashboard menampilkan keterangan tidak ada kuliah dan tombol tambah catatan tidak tersedia.
+| Berkas | Perubahan |
+|--------|-----------|
+| `lib/data/database_helper.dart` | **Baru.** Membuka `studylog.db`, membuat tabel `catatan` |
+| `lib/data/catatan_repository.dart` | **Baru.** Kontrak CRUD + `SqliteCatatanRepository` |
+| `lib/data/memori_catatan_repository.dart` | **Baru.** Versi memori dengan kontrak sama (untuk pengujian) |
+| `lib/models/catatan.dart` | + `toMap()` / `fromMap()` |
+| `lib/state/catatan_store.dart` | Memakai repository; `tambah/ubah/hapus` kini `Future`; + `muat()`, `galat` |
+| `lib/main.dart` | Store dibuat dengan repository SQLite, lalu `muat()` saat app dibuka |
+| `lib/screens/tambah_catatan_page.dart` | `SIMPAN` menunggu SQLite (`await`), tombol nonaktif saat menyimpan, tampil galat |
+| `lib/screens/detail_catatan_page.dart` | `HAPUS` menunggu SQLite, tampil galat bila gagal |
+| `lib/screens/daftar_catatan_page.dart` | Menampilkan pesan bila memuat database gagal |
+| `pubspec.yaml` | + `sqflite`, `path` |
+| `test/` | Test store jadi async, + `catatan_model_test.dart`, + tes persistensi |
 
-### Form Tambah Catatan
-- **Tanpa pilihan mata kuliah.** Mata kuliah otomatis mengikuti card yang dipilih di dashboard dan ditampilkan pada header form.
-- Dua input: **judul catatan** dan **isi catatan**.
-- **Validasi**: field kosong dan field yang hanya berisi spasi ditolak (memakai `trim()`).
-- **Umpan balik**: `SnackBar` untuk status gagal maupun berhasil, serta card hasil di dashboard.
-- **Draft otomatis** per mata kuliah, tersimpan saat mengetik, saat keluar dari halaman, dan saat aplikasi ditinggalkan. Draft dipulihkan ketika form dibuka lagi, walau aplikasi sempat ditutup total.
+Tabel `catatan`: `id` (PK, AUTOINCREMENT), `mata_kuliah`, `judul`, `isi`, `waktu` (teks ISO 8601).
 
----
+Alur data: **Layar → CatatanStore → CatatanRepository → SQLite.** Layar tidak menulis SQL.
+Draft otomatis tetap memakai `shared_preferences` (terpisah dari database).
 
-## Struktur Proyek
+## Menjalankan
 
-```text
-studylogform/
-├── android/                         # Konfigurasi platform Android (dibuat otomatis)
-├── lib/
-│   ├── main.dart                    # Titik masuk aplikasi + MaterialApp
-│   ├── data/
-│   │   ├── jadwal.dart              # Jadwal kuliah, jam, status (akan datang/berlangsung/selesai)
-│   │   └── draft_keys.dart          # Kunci penyimpanan draft per mata kuliah
-│   ├── models/
-│   │   └── catatan.dart             # Model HasilCatatan
-│   ├── theme/
-│   │   └── warna_mata_kuliah.dart   # Warna unik setiap mata kuliah
-│   ├── screens/
-│   │   ├── dashboard_page.dart      # Dashboard: jam real time, mata kuliah & catatan hari ini
-│   │   └── tambah_catatan_page.dart # Form judul + isi, validasi, draft otomatis
-│   └── widgets/
-│       ├── mata_kuliah_card.dart    # Card mata kuliah + tombol tambah catatan
-│       └── catatan_card.dart        # Card hasil berwarna
-├── test/
-│   ├── widget_test.dart             # Pengujian widget (14 skenario)
-│   └── jadwal_test.dart             # Pengujian unit jadwal dan status (7 skenario)
-├── docs/
-│   └── screenshots/                 # Bukti screenshot untuk laporan
-├── pubspec.yaml                     # Dependensi proyek
-└── README.md
+```powershell
+flutter pub get
+flutter analyze
+flutter test
+flutter run          # pilih emulator/HP Android (sqflite tidak jalan di Chrome/Windows)
+```
+
+## Matriks uji manual (isi kolom Hasil)
+
+| ID | Skenario | Langkah | Yang diharapkan | Hasil |
+|----|----------|---------|-----------------|-------|
+| T1 | Form kosong | TAMBAH CATATAN → SIMPAN | Pesan "wajib diisi" | |
+| T2 | Hanya spasi | Isi judul dengan spasi → SIMPAN | Ditolak | |
+| T3 | CREATE | Isi judul + isi → SIMPAN | Snackbar sukses, catatan tampil di dashboard dan Daftar | |
+| T4 | READ | LIHAT SEMUA CATATAN → buka catatan | Detail cocok dengan input | |
+| T5 | UPDATE | Detail → UBAH → ganti judul → SIMPAN PERUBAHAN | Detail dan daftar berubah | |
+| T6 | DELETE batal | HAPUS → BATAL | Catatan tetap ada | |
+| T7 | DELETE setuju | HAPUS → HAPUS | Catatan hilang | |
+| T8 | Persistensi | Tutup total app (swipe dari recent apps), buka lagi | Semua catatan masih ada | |
+
+## Bukti untuk pengumpulan
+
+Screenshot (dashboard, form, daftar, detail, dialog hapus), video demo CRUD + buka ulang app,
+commit Git `M3 — SQLite dan CRUD`.

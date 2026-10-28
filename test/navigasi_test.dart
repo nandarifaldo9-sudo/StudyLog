@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:studylogform/data/memori_catatan_repository.dart';
 import 'package:studylogform/main.dart';
 import 'package:studylogform/widgets/catatan_card.dart';
 
@@ -11,7 +12,8 @@ Future<void> bukaApp(WidgetTester tester) async {
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(StudyLogApp(now: () => rabu));
+  await tester.pumpWidget(
+      StudyLogApp(now: () => rabu, repository: MemoriCatatanRepository()));
   await tester.pumpAndSettle();
 }
 
@@ -114,5 +116,26 @@ void main() {
 
     expect(find.text('Semua Catatan'), findsOneWidget);
     expect(find.byType(CatatanCard), findsNothing);
+  });
+
+  testWidgets('Catatan tetap ada saat app dibuka ulang (repository sama)',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final repo = MemoriCatatanRepository(); // meniru database yang bertahan
+
+    await tester.pumpWidget(StudyLogApp(now: () => rabu, repository: repo));
+    await tester.pumpAndSettle();
+    await tambahCatatan(tester, 'Caesar Cipher', 'Geser huruf.');
+
+    // "Tutup" app, lalu buka lagi dengan database yang sama.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(StudyLogApp(now: () => rabu, repository: repo));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Caesar Cipher'), findsOneWidget);
+    expect(find.byType(CatatanCard), findsOneWidget);
   });
 }

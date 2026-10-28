@@ -11,11 +11,19 @@ class DaftarCatatanPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final daftar = context.watch<CatatanStore>().semua;
+    final store = context.watch<CatatanStore>();
+    final daftar = store.semua;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Semua Catatan')),
-      body: daftar.isEmpty
+      body: store.galat != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(store.galat!, textAlign: TextAlign.center),
+              ),
+            )
+          : daftar.isEmpty
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),

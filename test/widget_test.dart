@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:studylogform/data/memori_catatan_repository.dart';
 import 'package:studylogform/main.dart';
 import 'package:studylogform/theme/warna_mata_kuliah.dart';
 import 'package:studylogform/widgets/catatan_card.dart';
@@ -17,7 +18,8 @@ Future<void> bukaApp(WidgetTester tester, DateTime waktu) async {
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(StudyLogApp(now: () => waktu));
+  await tester.pumpWidget(
+      StudyLogApp(now: () => waktu, repository: MemoriCatatanRepository()));
   await tester.pumpAndSettle();
 }
 
