@@ -8,10 +8,10 @@ Fitur pilihan kelompok dari opsi PjBL: **A — Pencarian** kata kunci judul atau
 - Logika ada di `CatatanStore.telusuri()` (penyaringan pada daftar yang sudah dimuat dari SQLite), sehingga layar tidak berisi logika pencarian.
 - Berkas: `lib/state/catatan_store.dart` (+ `telusuri`), `lib/screens/daftar_catatan_page.dart` (+ kolom cari), `test/pencarian_test.dart` (baru).
 
-| ID | Skenario | Langkah | Yang diharapkan | Hasil |
+| No | Skenario | Langkah | Yang diharapkan | Hasil |
 |----|----------|---------|-----------------|-------|
-| T9 | Cari judul | Daftar → ketik sebagian judul | Hanya catatan yang cocok tampil | |
-| T10 | Cari mata kuliah | Daftar → ketik sebagian nama mata kuliah | Semua catatan mata kuliah itu tampil | |
-| T11 | Tidak ditemukan | Daftar → ketik kata acak | Pesan "Tidak ada catatan yang cocok" | |
-| T12 | Hapus pencarian | Tekan ✕ pada kolom cari | Semua catatan tampil kembali | |
-| T13 | Pencarian + CRUD | Cari → buka Detail → UBAH/HAPUS → kembali | Daftar hasil ikut diperbarui | |
+| 1 | Cari judul | Daftar → ketik sebagian judul | Hanya catatan yang cocok tampil | |
+| 2 | Cari mata kuliah | Daftar → ketik sebagian nama mata kuliah | Semua catatan mata kuliah itu tampil | |
+| 3 | Tidak ditemukan | Daftar → ketik kata acak | Pesan "Tidak ada catatan yang cocok" | |
+| 4 | Hapus pencarian | Tekan ✕ pada kolom cari | Semua catatan tampil kembali | |
+| 5 | Pencarian + CRUD | Cari → buka Detail → UBAH/HAPUS → kembali | Daftar hasil ikut diperbarui | |
