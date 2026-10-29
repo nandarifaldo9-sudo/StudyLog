@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'data/catatan_repository.dart';
 import 'data/database_helper.dart';
 import 'screens/dashboard_page.dart';
@@ -9,8 +11,13 @@ import 'state/catatan_store.dart';
 /// StudyLog - Milestone 3
 /// Data catatan disimpan permanen di SQLite lewat CatatanRepository, dan
 /// tetap dibagikan ke semua layar oleh CatatanStore (ChangeNotifier + Provider).
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
+  }
+
   runApp(const StudyLogApp());
 }
 

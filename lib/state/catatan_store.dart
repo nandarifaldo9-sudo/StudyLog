@@ -38,6 +38,19 @@ class CatatanStore extends ChangeNotifier {
     return null;
   }
 
+/// Pencarian: catatan yang judul atau mata kuliahnya memuat [kataKunci]
+ List<HasilCatatan> telusuri(String kataKunci) {
+    final kunci = kataKunci.trim().toLowerCase();
+    if (kunci.isEmpty) return semua;
+    return _data
+        .where(
+          (c) =>
+              c.judul.toLowerCase().contains(kunci) ||
+              c.mataKuliah.toLowerCase().contains(kunci),
+        )
+        .toList();
+  }
+
   /// Memuat seluruh catatan dari database. Dipanggil sekali saat app dibuka.
   Future<void> muat() async {
     _sedangMemuat = true;

@@ -1,7 +1,10 @@
+
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
-/// Membuka dan menyiapkan database SQLite lokal (satu koneksi untuk seluruh app).
+/// Membuka dan menyiapkan database SQLite lokal.
 class DatabaseHelper {
   DatabaseHelper._();
 
@@ -16,13 +19,21 @@ class DatabaseHelper {
     try {
       return await (_database ??= _buka());
     } catch (_) {
-      _database = null; // izinkan percobaan ulang jika gagal membuka
+      _database = null;
       rethrow;
     }
   }
 
   Future<Database> _buka() async {
-    final lokasi = join(await getDatabasesPath(), namaDatabase);
+    // Pilih implementasi database sesuai platform.
+    if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb;
+    }
+
+    final lokasi = kIsWeb
+        ? namaDatabase
+        : join(await getDatabasesPath(), namaDatabase);
+
     return openDatabase(
       lokasi,
       version: 1,
