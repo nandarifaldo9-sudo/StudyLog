@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/draft_keys.dart';
 import '../data/jadwal.dart';
 import '../models/catatan.dart';
-import '../state/catatan_store.dart';
+import '../viewmodels/catatan_view_model.dart';
 import '../theme/warna_mata_kuliah.dart';
 import '../widgets/catatan_card.dart';
 import '../widgets/mata_kuliah_card.dart';
@@ -91,7 +91,7 @@ class _DashboardPageState extends State<DashboardPage>
     setState(() => _adaDraft = ada);
   }
 
-  /// Navigator.push -> Form. Form menyimpan ke CatatanStore sendiri,
+  /// Navigator.push -> Form. Form menyimpan ke CatatanViewModel sendiri,
   /// lalu mengembalikan true jika catatan berhasil disimpan.
   Future<void> _bukaForm(JadwalKuliah jadwal) async {
     final tersimpan = await Navigator.push<bool>(
@@ -119,7 +119,7 @@ class _DashboardPageState extends State<DashboardPage>
   void _bukaDaftar() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const DaftarCatatanPage()),
+      MaterialPageRoute(builder: (_) => DaftarCatatanPage(now: widget.now)),
     );
   }
 
@@ -204,9 +204,9 @@ class _DashboardPageState extends State<DashboardPage>
 
   @override
   Widget build(BuildContext context) {
-    // watch: dashboard dibangun ulang setiap CatatanStore memanggil
+    // watch: dashboard dibangun ulang setiap CatatanViewModel memanggil
     // notifyListeners() (tambah / ubah / hapus dari layar mana pun).
-    final store = context.watch<CatatanStore>();
+    final store = context.watch<CatatanViewModel>();
     final jadwalHariIni = _jadwalHariIni;
     final namaHariIni = jadwalHariIni.map((j) => j.nama).toList();
     final berlangsung = _kuliahBerlangsung;

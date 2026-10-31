@@ -8,8 +8,8 @@ import '../models/catatan.dart';
 /// M2: data hanya di memori. M3: setiap perubahan ditulis dulu ke
 /// [CatatanRepository] (SQLite), baru daftar di memori diperbarui dan
 /// notifyListeners() dipanggil agar Consumer/watch membangun ulang UI.
-class CatatanStore extends ChangeNotifier {
-  CatatanStore(this._repository);
+class CatatanViewModel extends ChangeNotifier {
+  CatatanViewModel(this._repository);
 
   final CatatanRepository _repository;
   final List<HasilCatatan> _data = [];

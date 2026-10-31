@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import 'data/catatan_repository.dart';
 import 'data/database_helper.dart';
 import 'screens/dashboard_page.dart';
-import 'state/catatan_store.dart';
+import 'viewmodels/catatan_view_model.dart';
 
 /// StudyLog - Milestone 3
 /// Data catatan disimpan permanen di SQLite lewat CatatanRepository, dan
-/// tetap dibagikan ke semua layar oleh CatatanStore (ChangeNotifier + Provider).
+/// tetap dibagikan ke semua layar oleh CatatanViewModel (ChangeNotifier + Provider).
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const StudyLogApp());
@@ -27,7 +27,7 @@ class StudyLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CatatanStore(
+      create: (_) => CatatanViewModel(
         repository ?? SqliteCatatanRepository(DatabaseHelper.instance),
       )..muat(),
       child: MaterialApp(

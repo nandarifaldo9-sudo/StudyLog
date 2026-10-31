@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studylogform/data/catatan_repository.dart';
 import 'package:studylogform/data/memori_catatan_repository.dart';
 import 'package:studylogform/models/catatan.dart';
-import 'package:studylogform/state/catatan_store.dart';
+import 'package:studylogform/viewmodels/catatan_view_model.dart';
 
 /// Repository yang selalu gagal, untuk menguji penanganan galat.
 class _RepositoryGagal implements CatatanRepository {
@@ -30,11 +30,11 @@ class _RepositoryGagal implements CatatanRepository {
 void main() {
   final waktu = DateTime(2026, 10, 26, 19, 30);
   late MemoriCatatanRepository repo;
-  late CatatanStore store;
+  late CatatanViewModel store;
 
   setUp(() {
     repo = MemoriCatatanRepository();
-    store = CatatanStore(repo);
+    store = CatatanViewModel(repo);
   });
 
   test('tambah: terbaru di atas dan listener dipanggil', () async {
@@ -97,7 +97,7 @@ void main() {
     await store.tambah(
         mataKuliah: 'Kriptografi', judul: 'B', isi: 'b', waktu: waktu);
 
-    final storeBaru = CatatanStore(repo); // meniru app dibuka ulang
+    final storeBaru = CatatanViewModel(repo); // meniru app dibuka ulang
     expect(storeBaru.jumlah, 0);
     await storeBaru.muat();
 
@@ -108,7 +108,7 @@ void main() {
   });
 
   test('muat yang gagal mengisi galat dan tidak melempar', () async {
-    final rusak = CatatanStore(_RepositoryGagal());
+    final rusak = CatatanViewModel(_RepositoryGagal());
 
     await rusak.muat();
 
@@ -118,7 +118,7 @@ void main() {
   });
 
   test('tambah yang gagal melempar dan daftar tidak berubah', () async {
-    final rusak = CatatanStore(_RepositoryGagal());
+    final rusak = CatatanViewModel(_RepositoryGagal());
 
     await expectLater(
       rusak.tambah(

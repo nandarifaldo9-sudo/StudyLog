@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../data/jadwal.dart';
 import '../models/catatan.dart';
-import '../state/catatan_store.dart';
+import '../viewmodels/catatan_view_model.dart';
 import '../theme/warna_mata_kuliah.dart';
 import 'tambah_catatan_page.dart';
 
@@ -54,7 +54,7 @@ class DetailCatatanPage extends StatelessWidget {
     );
     if (setuju != true || !context.mounted) return;
 
-    final store = context.read<CatatanStore>();
+    final store = context.read<CatatanViewModel>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -80,7 +80,7 @@ class DetailCatatanPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.watch<CatatanStore>().cari(catatan.id) ?? catatan;
+    final c = context.watch<CatatanViewModel>().cari(catatan.id) ?? catatan;
     final warna = warnaUntuk(c.mataKuliah);
     final hari = namaHari[c.waktu.weekday - 1];
 

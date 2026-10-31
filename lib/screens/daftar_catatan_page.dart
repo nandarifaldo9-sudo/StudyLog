@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../state/catatan_store.dart';
+import '../viewmodels/catatan_view_model.dart';
 import '../widgets/catatan_card.dart';
 import 'detail_catatan_page.dart';
 
-/// Layar Daftar: menampilkan semua catatan dari CatatanStore.
+/// Layar Daftar: menampilkan semua catatan dari CatatanViewModel.
 class DaftarCatatanPage extends StatelessWidget {
-  const DaftarCatatanPage({super.key});
+  final DateTime Function()? now;
+
+  const DaftarCatatanPage({super.key, this.now});
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<CatatanStore>();
+    final store = context.watch<CatatanViewModel>();
     final daftar = store.semua;
 
     return Scaffold(

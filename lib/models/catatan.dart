@@ -14,14 +14,14 @@ class HasilCatatan {
     required this.waktu,
   });
 
-  /// Peta kolom SQLite. `waktu` disimpan sebagai teks ISO 8601.
+  /// Peta kolom SQLite. `tanggal` disimpan sebagai teks ISO 8601.
   Map<String, Object?> toMap() {
     return {
       'id': id,
       'mata_kuliah': mataKuliah,
       'judul': judul,
       'isi': isi,
-      'waktu': waktu.toIso8601String(),
+      'tanggal': waktu.toIso8601String(),
     };
   }
 
@@ -31,7 +31,7 @@ class HasilCatatan {
       mataKuliah: map['mata_kuliah'] as String,
       judul: map['judul'] as String,
       isi: map['isi'] as String,
-      waktu: DateTime.parse(map['waktu'] as String),
+      waktu: DateTime.parse(map['tanggal'] as String),
     );
   }
 
