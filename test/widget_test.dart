@@ -92,7 +92,7 @@ void main() {
   testWidgets('T1: form kosong menampilkan pesan error', (tester) async {
     await bukaApp(tester, senin);
     await bukaForm(tester, 0);
-    await tester.tap(find.text('SIMPAN'));
+    await tester.tap(find.text('TAMPILKAN CATATAN'));
     await tester.pump();
 
     expect(find.text('Judul catatan wajib diisi'), findsOneWidget);
@@ -104,7 +104,7 @@ void main() {
     await bukaApp(tester, senin);
     await bukaForm(tester, 0);
     await isiForm(tester, judul: '   ', isi: '   ');
-    await tester.tap(find.text('SIMPAN'));
+    await tester.tap(find.text('TAMPILKAN CATATAN'));
     await tester.pump();
 
     expect(find.text('Judul catatan wajib diisi'), findsOneWidget);
@@ -116,12 +116,12 @@ void main() {
     await bukaApp(tester, rabu);
     await bukaForm(tester, 0);
     await isiForm(tester, judul: 'Caesar Cipher', isi: 'Geser huruf.');
-    await tester.tap(find.text('SIMPAN'));
+    await tester.tap(find.text('TAMPILKAN CATATAN'));
     await tester.pumpAndSettle();
 
     expect(find.byType(CatatanCard), findsOneWidget);
     expect(find.text('Caesar Cipher'), findsOneWidget);
-    expect(find.text('Catatan berhasil disimpan'), findsOneWidget);
+    expect(find.text('Data ditampilkan (belum tersimpan permanen).'), findsOneWidget);
     expect(find.text('1 catatan'), findsOneWidget);
     expect(warnaCard(tester, 0), warnaMataKuliah['Kriptografi']);
   });
@@ -132,12 +132,12 @@ void main() {
 
     await bukaForm(tester, 0);
     await isiForm(tester, judul: 'Normalisasi', isi: '1NF 2NF 3NF');
-    await tester.tap(find.text('SIMPAN'));
+    await tester.tap(find.text('TAMPILKAN CATATAN'));
     await tester.pumpAndSettle();
 
     await bukaForm(tester, 1);
     await isiForm(tester, judul: 'Flutter', isi: 'Widget');
-    await tester.tap(find.text('SIMPAN'));
+    await tester.tap(find.text('TAMPILKAN CATATAN'));
     await tester.pumpAndSettle();
 
     expect(find.byType(CatatanCard), findsNWidgets(2));
@@ -161,7 +161,7 @@ void main() {
       'Draft baru',
     );
 
-    await tester.tap(find.text('SIMPAN'));
+    await tester.tap(find.text('TAMPILKAN CATATAN'));
     await tester.pumpAndSettle();
 
     prefs = await SharedPreferences.getInstance();

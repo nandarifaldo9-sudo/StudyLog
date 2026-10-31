@@ -106,7 +106,9 @@ class _DashboardPageState extends State<DashboardPage>
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Catatan berhasil disimpan')),
+        const SnackBar(
+          content: Text('Data ditampilkan (belum tersimpan permanen).'),
+        ),
       );
     }
     await _muatStatusDraft();

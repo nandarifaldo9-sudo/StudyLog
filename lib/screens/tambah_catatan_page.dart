@@ -253,7 +253,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage>
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: _simpan,
-                      child: const Text('SIMPAN'),
+                                            child: const Text('TAMPILKAN CATATAN'),
                     ),
                   ),
                 ],
