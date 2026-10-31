@@ -13,13 +13,17 @@ Future<void> bukaApp(WidgetTester tester) async {
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-      StudyLogApp(now: () => rabu, repository: MemoriCatatanRepository()));
+    StudyLogApp(now: () => rabu, repository: MemoriCatatanRepository()),
+  );
   await tester.pumpAndSettle();
 }
 
 /// Beranda -> Form -> SIMPAN -> kembali ke Beranda.
 Future<void> tambahCatatan(
-    WidgetTester tester, String judul, String isi) async {
+  WidgetTester tester,
+  String judul,
+  String isi,
+) async {
   await tester.tap(find.text('TAMBAH CATATAN'));
   await tester.pumpAndSettle();
   await tester.pump();
@@ -70,8 +74,9 @@ void main() {
     expect(find.text('StudyLog'), findsOneWidget);
   });
 
-  testWidgets('Ubah catatan: Detail langsung memperlihatkan judul baru',
-      (tester) async {
+  testWidgets('Ubah catatan: Detail langsung memperlihatkan judul baru', (
+    tester,
+  ) async {
     await bukaApp(tester);
     await tambahCatatan(tester, 'Caesar Cipher', 'Geser huruf.');
     await bukaDetail(tester, 'Caesar Cipher');
@@ -118,8 +123,9 @@ void main() {
     expect(find.byType(CatatanCard), findsNothing);
   });
 
-  testWidgets('Catatan tetap ada saat app dibuka ulang (repository sama)',
-      (tester) async {
+  testWidgets('Catatan tetap ada saat app dibuka ulang (repository sama)', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);

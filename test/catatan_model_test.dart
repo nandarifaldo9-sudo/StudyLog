@@ -4,7 +4,7 @@ import 'package:studylogform/models/catatan.dart';
 void main() {
   final waktu = DateTime(2026, 10, 26, 19, 30);
 
-  test('toMap memakai nama kolom SQLite dan waktu ISO 8601', () {
+  test('toMap memakai nama kolom SQLite dan tanggal ISO 8601', () {
     final c = HasilCatatan(
       id: 3,
       mataKuliah: 'Kriptografi',
@@ -18,7 +18,7 @@ void main() {
       'mata_kuliah': 'Kriptografi',
       'judul': 'Caesar Cipher',
       'isi': 'Geser huruf.',
-      'waktu': waktu.toIso8601String(),
+      'tanggal': waktu.toIso8601String(),
     });
   });
 

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../state/catatan_store.dart';
+import '../viewmodels/catatan_view_model.dart';
 import '../widgets/catatan_card.dart';
 import 'detail_catatan_page.dart';
+import 'tambah_dari_daftar.dart';
 
-/// Layar Daftar: semua catatan dari CatatanStore, dengan pencarian
+/// Layar Daftar: semua catatan dari CatatanViewModel, dengan pencarian
 /// berdasarkan judul atau mata kuliah.
 class DaftarCatatanPage extends StatefulWidget {
-  const DaftarCatatanPage({super.key});
+  /// [now] dipakai pengujian agar hari/jam bisa diatur.
+  final DateTime Function()? now;
+
+  const DaftarCatatanPage({super.key, this.now});
 
   @override
   State<DaftarCatatanPage> createState() => _DaftarCatatanPageState();
@@ -61,23 +65,35 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<CatatanStore>();
-    final hasil = store.telusuri(_kataKunci);
+    final vm = context.watch<CatatanViewModel>();
+    final hasil = vm.telusuri(_kataKunci);
     final mencari = _kataKunci.trim().isNotEmpty;
 
     final Widget isi;
-    if (store.galat != null) {
-      isi = _pesan(store.galat!);
-    } else if (store.jumlah == 0) {
-      isi = _pesan(
-        'Belum ada catatan.\n'
-        'Tambahkan dari mata kuliah di beranda.',
+    if (vm.sedangMemuat) {
+      isi = const Center(child: CircularProgressIndicator());
+    } else if (vm.galat != null) {
+      isi = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(vm.galat!, textAlign: TextAlign.center),
+              TextButton(onPressed: vm.muat, child: const Text('Coba lagi')),
+            ],
+          ),
+        ),
       );
+    } else if (vm.jumlah == 0) {
+      isi = _pesan('Belum ada catatan. Tekan + untuk menambah catatan.');
     } else if (hasil.isEmpty) {
-      isi = _pesan('Tidak ada catatan yang cocok dengan "${_kataKunci.trim()}".');
+      isi = _pesan(
+        'Tidak ada catatan yang cocok dengan "${_kataKunci.trim()}".',
+      );
     } else {
       isi = ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
         itemCount: hasil.length,
         itemBuilder: (context, i) {
           final catatan = hasil[i];
@@ -95,7 +111,16 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Semua Catatan')),
+      appBar: AppBar(
+        title: const Text('Semua Catatan'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(28),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('Total ${vm.jumlah} catatan'),
+          ),
+        ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -115,6 +140,15 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
             ),
           Expanded(child: isi),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => bukaFormDariDaftar(
+          context,
+          now: widget.now,
+          pesanSukses: 'Catatan berhasil disimpan',
+        ),
+        icon: const Icon(Icons.add),
+        label: const Text('Tambah'),
       ),
     );
   }

@@ -8,8 +8,8 @@ import '../models/catatan.dart';
 /// M2: data hanya di memori. M3: setiap perubahan ditulis dulu ke
 /// [CatatanRepository] (SQLite), baru daftar di memori diperbarui dan
 /// notifyListeners() dipanggil agar Consumer/watch membangun ulang UI.
-class CatatanStore extends ChangeNotifier {
-  CatatanStore(this._repository);
+class CatatanViewModel extends ChangeNotifier {
+  CatatanViewModel(this._repository);
 
   final CatatanRepository _repository;
   final List<HasilCatatan> _data = [];
@@ -38,8 +38,8 @@ class CatatanStore extends ChangeNotifier {
     return null;
   }
 
-/// Pencarian: catatan yang judul atau mata kuliahnya memuat [kataKunci]
- List<HasilCatatan> telusuri(String kataKunci) {
+  /// Pencarian: catatan yang judul atau mata kuliahnya memuat [kataKunci].
+  List<HasilCatatan> telusuri(String kataKunci) {
     final kunci = kataKunci.trim().toLowerCase();
     if (kunci.isEmpty) return semua;
     return _data
@@ -85,8 +85,11 @@ class CatatanStore extends ChangeNotifier {
     _beritahu();
   }
 
-  Future<void> ubah(int id,
-      {required String judul, required String isi}) async {
+  Future<void> ubah(
+    int id, {
+    required String judul,
+    required String isi,
+  }) async {
     if (cari(id) == null) return;
     await _repository.ubah(id, judul: judul, isi: isi);
     final i = _data.indexWhere((c) => c.id == id);

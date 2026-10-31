@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:studylogform/data/memori_catatan_repository.dart';
 import 'package:studylogform/main.dart';
-import 'package:studylogform/state/catatan_store.dart';
+import 'package:studylogform/viewmodels/catatan_view_model.dart';
 import 'package:studylogform/widgets/catatan_card.dart';
 
 final rabu = DateTime(2026, 10, 28, 8, 0);
@@ -54,11 +54,11 @@ Future<void> cari(WidgetTester tester, String kataKunci) async {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  group('CatatanStore.telusuri', () {
-    late CatatanStore store;
+  group('CatatanViewModel.telusuri', () {
+    late CatatanViewModel store;
 
     setUp(() async {
-      store = CatatanStore(await isiRepository());
+      store = CatatanViewModel(await isiRepository());
       await store.muat();
     });
 
@@ -103,7 +103,9 @@ void main() {
     expect(find.text('1 catatan ditemukan'), findsOneWidget);
   });
 
-  testWidgets('Cari mata kuliah: semua catatan mata kuliah itu', (tester) async {
+  testWidgets('Cari mata kuliah: semua catatan mata kuliah itu', (
+    tester,
+  ) async {
     await bukaDaftar(tester);
     await cari(tester, 'krip');
 
@@ -119,8 +121,9 @@ void main() {
     expect(find.textContaining('Tidak ada catatan yang cocok'), findsOneWidget);
   });
 
-  testWidgets('Tombol hapus pencarian mengembalikan semua catatan',
-      (tester) async {
+  testWidgets('Tombol hapus pencarian mengembalikan semua catatan', (
+    tester,
+  ) async {
     await bukaDaftar(tester);
     await cari(tester, 'caesar');
     expect(find.byType(CatatanCard), findsOneWidget);

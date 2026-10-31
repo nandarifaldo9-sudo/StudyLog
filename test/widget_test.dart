@@ -19,7 +19,8 @@ Future<void> bukaApp(WidgetTester tester, DateTime waktu) async {
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-      StudyLogApp(now: () => waktu, repository: MemoriCatatanRepository()));
+    StudyLogApp(now: () => waktu, repository: MemoriCatatanRepository()),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -30,8 +31,11 @@ Future<void> bukaForm(WidgetTester tester, int index) async {
   await tester.pump();
 }
 
-Future<void> isiForm(WidgetTester tester,
-    {required String judul, required String isi}) async {
+Future<void> isiForm(
+  WidgetTester tester, {
+  required String judul,
+  required String isi,
+}) async {
   final fields = find.byType(TextFormField);
   await tester.enterText(fields.at(0), judul);
   await tester.enterText(fields.at(1), isi);
@@ -52,8 +56,9 @@ Color warnaCard(WidgetTester tester, int index) {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('Senin: dashboard hanya menampilkan mata kuliah Senin',
-      (tester) async {
+  testWidgets('Senin: dashboard hanya menampilkan mata kuliah Senin', (
+    tester,
+  ) async {
     await bukaApp(tester, senin);
 
     expect(find.text('Sistem Manajemen Basis Data'), findsOneWidget);
@@ -72,16 +77,18 @@ void main() {
     expect(find.text('TAMBAH CATATAN'), findsOneWidget);
   });
 
-  testWidgets('Sabtu: tidak ada kuliah dan tidak ada tombol tambah',
-      (tester) async {
+  testWidgets('Sabtu: tidak ada kuliah dan tidak ada tombol tambah', (
+    tester,
+  ) async {
     await bukaApp(tester, sabtu);
 
     expect(find.textContaining('Tidak ada kuliah hari ini'), findsOneWidget);
     expect(find.text('TAMBAH CATATAN'), findsNothing);
   });
 
-  testWidgets('Form otomatis memakai mata kuliah terpilih tanpa dropdown',
-      (tester) async {
+  testWidgets('Form otomatis memakai mata kuliah terpilih tanpa dropdown', (
+    tester,
+  ) async {
     await bukaApp(tester, senin);
     await bukaForm(tester, 1); // Teknologi Aplikasi Bergerak
 
@@ -113,8 +120,9 @@ void main() {
     expect(find.text('Isi catatan wajib diisi'), findsOneWidget);
   });
 
-  testWidgets('T3: input valid kembali ke dashboard dengan card berwarna',
-      (tester) async {
+  testWidgets('T3: input valid kembali ke dashboard dengan card berwarna', (
+    tester,
+  ) async {
     await bukaApp(tester, rabu);
     await bukaForm(tester, 0);
     await isiForm(tester, judul: 'Caesar Cipher', isi: 'Geser huruf.');
@@ -128,8 +136,9 @@ void main() {
     expect(warnaCard(tester, 0), warnaMataKuliah['Kriptografi']);
   });
 
-  testWidgets('Mata kuliah berbeda menghasilkan warna card berbeda',
-      (tester) async {
+  testWidgets('Mata kuliah berbeda menghasilkan warna card berbeda', (
+    tester,
+  ) async {
     await bukaApp(tester, senin);
 
     await bukaForm(tester, 0);
@@ -144,13 +153,20 @@ void main() {
 
     expect(find.byType(CatatanCard), findsNWidgets(2));
     // Terbaru di atas: index 0 = TAB, index 1 = SMBD.
-    expect(warnaCard(tester, 0), warnaMataKuliah['Teknologi Aplikasi Bergerak']);
-    expect(warnaCard(tester, 1), warnaMataKuliah['Sistem Manajemen Basis Data']);
+    expect(
+      warnaCard(tester, 0),
+      warnaMataKuliah['Teknologi Aplikasi Bergerak'],
+    );
+    expect(
+      warnaCard(tester, 1),
+      warnaMataKuliah['Sistem Manajemen Basis Data'],
+    );
     expect(warnaCard(tester, 0), isNot(warnaCard(tester, 1)));
   });
 
-  testWidgets('Draft tersimpan lalu dihapus setelah catatan disimpan',
-      (tester) async {
+  testWidgets('Draft tersimpan lalu dihapus setelah catatan disimpan', (
+    tester,
+  ) async {
     await bukaApp(tester, senin);
     await bukaForm(tester, 0);
     await isiForm(tester, judul: 'Draft baru', isi: 'Belum selesai');
@@ -167,14 +183,12 @@ void main() {
     await tester.pumpAndSettle();
 
     prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getString('draft_judul_Sistem Manajemen Basis Data'),
-      isNull,
-    );
+    expect(prefs.getString('draft_judul_Sistem Manajemen Basis Data'), isNull);
   });
 
-  testWidgets('Draft lama dipulihkan dan ditandai di dashboard',
-      (tester) async {
+  testWidgets('Draft lama dipulihkan dan ditandai di dashboard', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({
       'draft_judul_Kriptografi': 'Judul draft',
       'draft_isi_Kriptografi': 'Isi draft',
@@ -190,16 +204,18 @@ void main() {
     expect(find.text('Isi draft'), findsOneWidget);
   });
 
-  testWidgets('Sebelum jam kuliah: semua akan datang, tanpa CATAT SEKARANG',
-      (tester) async {
+  testWidgets('Sebelum jam kuliah: semua akan datang, tanpa CATAT SEKARANG', (
+    tester,
+  ) async {
     await bukaApp(tester, senin); // 08:00
 
     expect(find.text('Akan datang'), findsNWidgets(2));
     expect(find.text('CATAT SEKARANG'), findsNothing);
   });
 
-  testWidgets('Senin 19:30: SMBD berlangsung dan CATAT SEKARANG membukanya',
-      (tester) async {
+  testWidgets('Senin 19:30: SMBD berlangsung dan CATAT SEKARANG membukanya', (
+    tester,
+  ) async {
     await bukaApp(tester, senin1930);
 
     expect(find.text('Sedang berlangsung'), findsOneWidget);
@@ -214,8 +230,9 @@ void main() {
     expect(find.text('Sistem Manajemen Basis Data'), findsOneWidget);
   });
 
-  testWidgets('Senin 20:30: berpindah ke Teknologi Aplikasi Bergerak',
-      (tester) async {
+  testWidgets('Senin 20:30: berpindah ke Teknologi Aplikasi Bergerak', (
+    tester,
+  ) async {
     await bukaApp(tester, senin2030);
 
     expect(find.text('Selesai'), findsOneWidget); // SMBD
@@ -228,8 +245,9 @@ void main() {
     expect(find.text('Teknologi Aplikasi Bergerak'), findsOneWidget);
   });
 
-  testWidgets('Senin 22:30: semua selesai, tanpa CATAT SEKARANG',
-      (tester) async {
+  testWidgets('Senin 22:30: semua selesai, tanpa CATAT SEKARANG', (
+    tester,
+  ) async {
     await bukaApp(tester, senin2230);
 
     expect(find.text('Selesai'), findsNWidgets(2));

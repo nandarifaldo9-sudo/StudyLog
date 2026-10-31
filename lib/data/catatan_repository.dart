@@ -32,7 +32,7 @@ class SqliteCatatanRepository implements CatatanRepository {
   @override
   Future<List<HasilCatatan>> semua() async {
     final db = await _helper.database;
-    final baris = await db.query(_tabel, orderBy: 'id DESC');
+    final baris = await db.query(_tabel, orderBy: 'tanggal DESC, id DESC');
     return baris.map(HasilCatatan.fromMap).toList();
   }
 
@@ -48,7 +48,7 @@ class SqliteCatatanRepository implements CatatanRepository {
       'mata_kuliah': mataKuliah,
       'judul': judul,
       'isi': isi,
-      'waktu': waktu.toIso8601String(),
+      'tanggal': waktu.toIso8601String(),
     });
     return HasilCatatan(
       id: id,
@@ -60,8 +60,11 @@ class SqliteCatatanRepository implements CatatanRepository {
   }
 
   @override
-  Future<void> ubah(int id,
-      {required String judul, required String isi}) async {
+  Future<void> ubah(
+    int id, {
+    required String judul,
+    required String isi,
+  }) async {
     final db = await _helper.database;
     await db.update(
       _tabel,

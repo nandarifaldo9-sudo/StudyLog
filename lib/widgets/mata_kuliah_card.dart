@@ -59,9 +59,7 @@ class MataKuliahCard extends StatelessWidget {
           children: [
             Text(
               jadwal.nama,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
+              style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold, color: warna),
             ),
             const SizedBox(height: 4),

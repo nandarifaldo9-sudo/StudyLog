@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../data/jadwal.dart';
 import '../models/catatan.dart';
-import '../state/catatan_store.dart';
+import '../viewmodels/catatan_view_model.dart';
 import '../theme/warna_mata_kuliah.dart';
 import 'tambah_catatan_page.dart';
 
@@ -19,10 +19,8 @@ class DetailCatatanPage extends StatelessWidget {
     final berhasil = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => TambahCatatanPage(
-          mataKuliah: c.mataKuliah,
-          catatanAwal: c,
-        ),
+        builder: (_) =>
+            TambahCatatanPage(mataKuliah: c.mataKuliah, catatanAwal: c),
       ),
     );
     if (berhasil == true && context.mounted) {
@@ -54,7 +52,7 @@ class DetailCatatanPage extends StatelessWidget {
     );
     if (setuju != true || !context.mounted) return;
 
-    final store = context.read<CatatanStore>();
+    final store = context.read<CatatanViewModel>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -73,14 +71,12 @@ class DetailCatatanPage extends StatelessWidget {
 
     if (context.mounted) navigator.pop(); // kembali ke layar sebelumnya
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Catatan dihapus')),
-    );
+    messenger.showSnackBar(const SnackBar(content: Text('Catatan dihapus')));
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = context.watch<CatatanStore>().cari(catatan.id) ?? catatan;
+    final c = context.watch<CatatanViewModel>().cari(catatan.id) ?? catatan;
     final warna = warnaUntuk(c.mataKuliah);
     final hari = namaHari[c.waktu.weekday - 1];
 

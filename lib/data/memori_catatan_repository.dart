@@ -29,8 +29,11 @@ class MemoriCatatanRepository implements CatatanRepository {
   }
 
   @override
-  Future<void> ubah(int id,
-      {required String judul, required String isi}) async {
+  Future<void> ubah(
+    int id, {
+    required String judul,
+    required String isi,
+  }) async {
     final i = _data.indexWhere((c) => c.id == id);
     if (i == -1) return;
     _data[i] = _data[i].copyWith(judul: judul, isi: isi);
