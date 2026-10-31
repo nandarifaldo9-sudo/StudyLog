@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import '../data/catatan_repository.dart';
 import '../models/catatan.dart';
 
+/// Urutan daftar catatan di layar Daftar.
+enum UrutanCatatan { terbaru, terlama }
+
 /// Sumber data tunggal untuk semua layar.
 ///
 /// M2: data hanya di memori. M3: setiap perubahan ditulis dulu ke
@@ -38,17 +41,23 @@ class CatatanViewModel extends ChangeNotifier {
     return null;
   }
 
-  /// Pencarian: catatan yang judul atau mata kuliahnya memuat [kataKunci].
-  List<HasilCatatan> telusuri(String kataKunci) {
+  /// Pencarian + urutan. Data di memori selalu terbaru di atas,
+  /// jadi "terlama" cukup dengan membalik hasilnya.
+  List<HasilCatatan> telusuri(
+    String kataKunci, {
+    UrutanCatatan urutan = UrutanCatatan.terbaru,
+  }) {
     final kunci = kataKunci.trim().toLowerCase();
-    if (kunci.isEmpty) return semua;
-    return _data
-        .where(
-          (c) =>
-              c.judul.toLowerCase().contains(kunci) ||
-              c.mataKuliah.toLowerCase().contains(kunci),
-        )
-        .toList();
+    final hasil = kunci.isEmpty
+        ? List<HasilCatatan>.of(_data)
+        : _data
+              .where(
+                (c) =>
+                    c.judul.toLowerCase().contains(kunci) ||
+                    c.mataKuliah.toLowerCase().contains(kunci),
+              )
+              .toList();
+    return urutan == UrutanCatatan.terbaru ? hasil : hasil.reversed.toList();
   }
 
   /// Memuat seluruh catatan dari database. Dipanggil sekali saat app dibuka.

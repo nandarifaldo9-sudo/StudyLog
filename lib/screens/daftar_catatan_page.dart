@@ -21,6 +21,7 @@ class DaftarCatatanPage extends StatefulWidget {
 class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
   final _kolomCari = TextEditingController();
   String _kataKunci = '';
+  UrutanCatatan _urutan = UrutanCatatan.terbaru;
 
   @override
   void dispose() {
@@ -66,7 +67,10 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CatatanViewModel>();
-    final hasil = vm.telusuri(_kataKunci);
+    final hasil = vm.telusuri(_kataKunci, urutan: _urutan);
+    final labelUrutan = _urutan == UrutanCatatan.terbaru
+        ? 'Terbaru dulu'
+        : 'Terlama dulu';
     final mencari = _kataKunci.trim().isNotEmpty;
 
     final Widget isi;
@@ -113,11 +117,30 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Semua Catatan'),
+        actions: [
+          PopupMenuButton<UrutanCatatan>(
+            key: const Key('menuUrutan'),
+            tooltip: 'Urutkan',
+            icon: const Icon(Icons.sort),
+            initialValue: _urutan,
+            onSelected: (nilai) => setState(() => _urutan = nilai),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: UrutanCatatan.terbaru,
+                child: Text('Terbaru dulu'),
+              ),
+              PopupMenuItem(
+                value: UrutanCatatan.terlama,
+                child: Text('Terlama dulu'),
+              ),
+            ],
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(28),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text('Total ${vm.jumlah} catatan'),
+            child: Text('Total ${vm.jumlah} catatan • $labelUrutan'),
           ),
         ),
       ),

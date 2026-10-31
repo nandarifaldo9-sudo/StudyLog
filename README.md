@@ -61,3 +61,16 @@ Fitur pilihan kelompok dari opsi PjBL: **A — Pencarian** kata kunci judul atau
 | T11 | Tidak ditemukan | Daftar → ketik kata acak | Pesan "Tidak ada catatan yang cocok" | |
 | T12 | Hapus pencarian | Tekan ✕ pada kolom cari | Semua catatan tampil kembali | |
 | T13 | Pencarian + CRUD | Cari → buka Detail → UBAH/HAPUS → kembali | Daftar hasil ikut diperbarui | |
+
+## Pengembangan pilihan 2: Urutkan catatan (PjBL, level Dasar)
+
+- Ikon urut di AppBar layar **Semua Catatan** memilih **Terbaru dulu** atau **Terlama dulu**.
+- Urutan berlaku bersama pencarian; pilihan aktif tampil di bawah judul AppBar.
+- Logika ada di `CatatanViewModel.telusuri(..., urutan:)` dan enum `UrutanCatatan`.
+- Berkas: `lib/viewmodels/catatan_view_model.dart`, `lib/screens/daftar_catatan_page.dart`, `test/urutan_test.dart`.
+
+| No | Skenario | Langkah | Yang diharapkan | Hasil |
+|----|----------|---------|-----------------|-------|
+| 1 | Terlama dulu | Daftar → ikon urut → Terlama dulu | Catatan terlama di atas | |
+| 2 | Kembali terbaru | Ikon urut → Terbaru dulu | Catatan terbaru di atas | |
+| 3 | Urut + cari | Pilih Terlama dulu → ketik kata kunci | Hasil terfilter dan urut terlama | |
