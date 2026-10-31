@@ -15,7 +15,7 @@ Future<void> bukaApp(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Beranda -> Form -> SIMPAN -> kembali ke Beranda.
+/// Beranda -> Form -> SIMPAN SEMENTARA -> kembali ke Beranda.
 Future<void> tambahCatatan(
     WidgetTester tester, String judul, String isi) async {
   await tester.tap(find.text('TAMBAH CATATAN'));
@@ -24,7 +24,7 @@ Future<void> tambahCatatan(
   final fields = find.byType(TextFormField);
   await tester.enterText(fields.at(0), judul);
   await tester.enterText(fields.at(1), isi);
-  await tester.tap(find.text('SIMPAN'));
+  await tester.tap(find.text('SIMPAN SEMENTARA'));
   await tester.pumpAndSettle();
 }
 

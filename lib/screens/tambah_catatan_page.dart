@@ -5,18 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/draft_keys.dart';
-import '../data/jadwal.dart';
 import '../models/catatan.dart';
 import '../state/catatan_store.dart';
-import '../theme/warna_mata_kuliah.dart';
 
 class TambahCatatanPage extends StatefulWidget {
-  /// Mata kuliah ditentukan dari dashboard, bukan dipilih di form.
   final String mataKuliah;
   final String? jam;
   final DateTime Function()? now;
-
-  /// Jika diisi, form berjalan dalam mode UBAH (tanpa draft).
   final HasilCatatan? catatanAwal;
 
   const TambahCatatanPage({
@@ -31,267 +26,160 @@ class TambahCatatanPage extends StatefulWidget {
   State<TambahCatatanPage> createState() => _TambahCatatanPageState();
 }
 
-class _TambahCatatanPageState extends State<TambahCatatanPage>
-    with WidgetsBindingObserver {
+class _TambahCatatanPageState extends State<TambahCatatanPage> {
   final _formKey = GlobalKey<FormState>();
-  final _judul = TextEditingController();
-  final _isi = TextEditingController();
-
+  late final TextEditingController _judulController;
+  late final TextEditingController _isiController;
+  Timer? _draftTimer;
   bool _draftDipulihkan = false;
-  bool _sedangMemulihkan = false;
-  Timer? _debounce;
 
-  bool get _modeUbah => widget.catatanAwal != null;
-
-  DateTime _now() => (widget.now ?? DateTime.now)();
+  bool get _mengubah => widget.catatanAwal != null;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    if (_modeUbah) {
-      _judul.text = widget.catatanAwal!.judul;
-      _isi.text = widget.catatanAwal!.isi;
-    } else {
-      _judul.addListener(_jadwalkanSimpanDraft);
-      _isi.addListener(_jadwalkanSimpanDraft);
-      _muatDraft();
-    }
+    _judulController = TextEditingController(
+      text: widget.catatanAwal?.judul ?? '',
+    );
+    _isiController = TextEditingController(
+      text: widget.catatanAwal?.isi ?? '',
+    );
+    if (!_mengubah) _muatDraft();
+    _judulController.addListener(_jadwalkanSimpanDraft);
+    _isiController.addListener(_jadwalkanSimpanDraft);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    // Keluar sebelum jeda debounce selesai: simpan draft sekarang juga.
-    if (_debounce?.isActive ?? false) {
-      _debounce!.cancel();
-      unawaited(_simpanDraft()); // nilai dibaca sebelum controller di-dispose
-    }
-    _judul.dispose();
-    _isi.dispose();
+    _draftTimer?.cancel();
+    _judulController.dispose();
+    _isiController.dispose();
     super.dispose();
   }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_modeUbah) return;
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
-      _debounce?.cancel();
-      unawaited(_simpanDraft());
-    }
-  }
-
-  // ----------------------------- DRAFT -------------------------------------
 
   Future<void> _muatDraft() async {
     final prefs = await SharedPreferences.getInstance();
     final judul = prefs.getString(kDraftJudul(widget.mataKuliah)) ?? '';
     final isi = prefs.getString(kDraftIsi(widget.mataKuliah)) ?? '';
     if (!mounted) return;
-    if (judul.trim().isEmpty && isi.trim().isEmpty) return;
-
-    _sedangMemulihkan = true;
-    _judul.text = judul;
-    _isi.text = isi;
-    _sedangMemulihkan = false;
-    setState(() => _draftDipulihkan = true);
+    if (judul.isNotEmpty || isi.isNotEmpty) {
+      _judulController.text = judul;
+      _isiController.text = isi;
+      setState(() => _draftDipulihkan = true);
+    }
   }
 
   void _jadwalkanSimpanDraft() {
-    if (_sedangMemulihkan) return;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), _simpanDraft);
+    if (_mengubah) return;
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 500), _simpanDraft);
   }
 
   Future<void> _simpanDraft() async {
-    if (_modeUbah) return; // mode ubah tidak memakai draft
-    // Ambil nilai dulu sebelum await agar aman jika widget sudah ditutup.
-    final mk = widget.mataKuliah;
-    final judul = _judul.text;
-    final isi = _isi.text;
     final prefs = await SharedPreferences.getInstance();
-
-    if (judul.trim().isEmpty && isi.trim().isEmpty) {
-      await prefs.remove(kDraftJudul(mk));
-      await prefs.remove(kDraftIsi(mk));
-      return;
-    }
-    await prefs.setString(kDraftJudul(mk), judul);
-    await prefs.setString(kDraftIsi(mk), isi);
+    await prefs.setString(
+      kDraftJudul(widget.mataKuliah),
+      _judulController.text,
+    );
+    await prefs.setString(
+      kDraftIsi(widget.mataKuliah),
+      _isiController.text,
+    );
   }
 
-  /// Mengosongkan form dan menghapus draft.
-  void _kosongkanForm() {
-    _debounce?.cancel();
-    _sedangMemulihkan = true;
-    _formKey.currentState?.reset();
-    _judul.clear();
-    _isi.clear();
-    _sedangMemulihkan = false;
-
-    setState(() => _draftDipulihkan = false);
-    unawaited(_simpanDraft()); // form kosong -> draft dihapus
+  Future<void> _hapusDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(kDraftJudul(widget.mataKuliah));
+    await prefs.remove(kDraftIsi(widget.mataKuliah));
   }
 
-  // ----------------------------- AKSI --------------------------------------
-
-  String? _wajibDiisi(String? value, String label) {
-    if (value == null || value.trim().isEmpty) {
-      return '$label wajib diisi';
-    }
-    return null;
-  }
-
-  /// Event: tombol SIMPAN ditekan.
-  void _simpan() {
-    if (!_formKey.currentState!.validate()) {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: const Text('Form belum valid, periksa kembali input'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
-      return;
-    }
+  Future<void> _simpan() async {
+    if (!_formKey.currentState!.validate()) return;
 
     final store = context.read<CatatanStore>();
-    final judul = _judul.text.trim();
-    final isi = _isi.text.trim();
-
-    if (_modeUbah) {
+    final judul = _judulController.text.trim();
+    final isi = _isiController.text.trim();
+    if (_mengubah) {
       store.ubah(widget.catatanAwal!.id, judul: judul, isi: isi);
+      if (!mounted) return;
       Navigator.pop(context, true);
       return;
     }
 
-    store.tambah(
+    final hasil = store.tambah(
       mataKuliah: widget.mataKuliah,
       judul: judul,
       isi: isi,
-      waktu: _now(),
+      waktu: (widget.now ?? DateTime.now)(),
     );
-    _kosongkanForm(); // form bersih + draft dihapus
-    Navigator.pop(context, true); // beri tahu pemanggil: berhasil disimpan
+    await _hapusDraft();
+    if (!mounted) return;
+    Navigator.pop(context, hasil);
   }
 
-  // ----------------------------- UI ----------------------------------------
-
-  Widget _headerMataKuliah() {
-    final warna = warnaUntuk(widget.mataKuliah);
-    final hari = namaHari[_now().weekday - 1];
-    final String subjudul;
-    if (_modeUbah) {
-      subjudul = 'Mengubah catatan';
-    } else if (widget.jam == null) {
-      subjudul = 'Kuliah hari $hari';
-    } else {
-      subjudul = 'Kuliah hari $hari • ${widget.jam}';
-    }
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: warna,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.menu_book, color: Colors.white),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.mataKuliah,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  subjudul,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bannerDraft() {
-    return Card(
-      color: const Color(0xFFFFF8E1),
-      margin: const EdgeInsets.only(top: 12),
-      child: ListTile(
-        leading: const Icon(Icons.restore),
-        title: const Text('Draft dipulihkan'),
-        subtitle: const Text('Isian terakhirmu yang belum disimpan kembali.'),
-        trailing: TextButton(
-          onPressed: _kosongkanForm,
-          child: const Text('HAPUS'),
-        ),
-      ),
-    );
+  String? _validasiWajib(String? nilai, String pesan) {
+    if (nilai == null || nilai.trim().isEmpty) return pesan;
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_modeUbah ? 'Ubah Catatan' : 'Tambah Catatan'),
+        title: Text(_mengubah ? 'Ubah Catatan' : 'Tambah Catatan'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _headerMataKuliah(),
-            if (_draftDipulihkan) _bannerDraft(),
-            const SizedBox(height: 16),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _judul,
-                    decoration: const InputDecoration(
-                      labelText: 'Judul catatan',
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.next,
-                    validator: (v) => _wajibDiisi(v, 'Judul catatan'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _isi,
-                    decoration: InputDecoration(
-                      labelText: 'Isi catatan',
-                      helperText: _modeUbah ? null : 'Draft tersimpan otomatis',
-                      alignLabelWithHint: true,
-                      border: const OutlineInputBorder(),
-                    ),
-                    minLines: 3,
-                    maxLines: 5,
-                    validator: (v) => _wajibDiisi(v, 'Isi catatan'),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _simpan,
-                      child: Text(_modeUbah ? 'SIMPAN PERUBAHAN' : 'SIMPAN'),
-                    ),
-                  ),
-                ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.mataKuliah,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-            ),
-          ],
+              if (widget.jam != null) ...[
+                const SizedBox(height: 4),
+                Text(widget.jam!),
+              ],
+              if (_draftDipulihkan) ...[
+                const SizedBox(height: 8),
+                const Text('Draft dipulihkan'),
+              ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _judulController,
+                decoration: const InputDecoration(
+                  labelText: 'Judul catatan',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (nilai) =>
+                    _validasiWajib(nilai, 'Judul catatan wajib diisi'),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _isiController,
+                decoration: const InputDecoration(
+                  labelText: 'Isi catatan',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                minLines: 5,
+                maxLines: 10,
+                validator: (nilai) =>
+                    _validasiWajib(nilai, 'Isi catatan wajib diisi'),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _simpan,
+                child: Text(
+                  _mengubah ? 'SIMPAN PERUBAHAN' : 'SIMPAN SEMENTARA',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

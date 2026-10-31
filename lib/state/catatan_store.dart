@@ -24,23 +24,22 @@ class CatatanStore extends ChangeNotifier {
     return null;
   }
 
-  void tambah({
+  HasilCatatan tambah({
     required String mataKuliah,
     required String judul,
     required String isi,
     required DateTime waktu,
   }) {
-    _data.insert(
-      0,
-      HasilCatatan(
-        id: _idBerikutnya++,
-        mataKuliah: mataKuliah,
-        judul: judul,
-        isi: isi,
-        waktu: waktu,
-      ),
+    final catatan = HasilCatatan(
+      id: _idBerikutnya++,
+      mataKuliah: mataKuliah,
+      judul: judul,
+      isi: isi,
+      waktu: waktu,
     );
+    _data.insert(0, catatan);
     notifyListeners();
+    return catatan;
   }
 
   void ubah(int id, {required String judul, required String isi}) {
