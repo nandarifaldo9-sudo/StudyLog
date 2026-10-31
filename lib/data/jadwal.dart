@@ -105,3 +105,16 @@ const Map<int, List<JadwalKuliah>> jadwalKuliah = {
 /// Format jam "HH:mm" dari sebuah [DateTime].
 String formatJam(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+const List<String> namaBulanSingkat = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+];
+
+/// Contoh: "30 Okt 2026"
+String formatTanggal(DateTime t) =>
+    '${t.day} ${namaBulanSingkat[t.month - 1]} ${t.year}';
+
+/// Contoh: "Jumat, 30 Okt 2026 • 19:28"
+String formatWaktuCatatan(DateTime t) =>
+    '${namaHari[t.weekday - 1]}, ${formatTanggal(t)} • ${formatJam(t)}';

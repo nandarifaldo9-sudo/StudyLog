@@ -78,7 +78,6 @@ class DetailCatatanPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<CatatanViewModel>().cari(catatan.id) ?? catatan;
     final warna = warnaUntuk(c.mataKuliah);
-    final hari = namaHari[c.waktu.weekday - 1];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Catatan')),
@@ -114,7 +113,7 @@ class DetailCatatanPage extends StatelessWidget {
             Text(c.judul, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(
-              '$hari, ${formatJam(c.waktu)}',
+              formatWaktuCatatan(c.waktu),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),

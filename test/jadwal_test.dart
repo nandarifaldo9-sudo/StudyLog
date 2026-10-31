@@ -10,6 +10,22 @@ void main() {
     selesai: 20 * 60 + 30,
   );
 
+  group('formatWaktuCatatan', () {
+    test('menampilkan hari, tanggal, dan jam', () {
+      expect(
+        formatWaktuCatatan(DateTime(2026, 10, 30, 19, 28)),
+        'Jumat, 30 Okt 2026 • 19:28',
+      );
+    });
+
+    test('bulan dan jam satu digit diformat benar', () {
+      expect(
+        formatWaktuCatatan(DateTime(2026, 5, 4, 8, 5)),
+        'Senin, 4 Mei 2026 • 08:05',
+      );
+    });
+  });
+
   group('statusKuliah', () {
     test('sebelum jam mulai: akan datang', () {
       expect(

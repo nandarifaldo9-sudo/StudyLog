@@ -14,7 +14,6 @@ class CatatanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final warna = warnaUntuk(data.mataKuliah);
-    final hari = namaHari[data.waktu.weekday - 1];
 
     return Card(
       color: Color.alphaBlend(warna.withAlpha(40), Colors.white),
@@ -54,7 +53,7 @@ class CatatanCard extends StatelessWidget {
               Text(data.isi, maxLines: 3, overflow: TextOverflow.ellipsis),
               const SizedBox(height: 8),
               Text(
-                '$hari, ${formatJam(data.waktu)}',
+                formatWaktuCatatan(data.waktu),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
