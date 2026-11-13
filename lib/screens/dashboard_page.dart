@@ -33,9 +33,11 @@ class _DashboardPageState extends State<DashboardPage>
 
   DateTime _now() => (widget.now ?? DateTime.now)();
 
-  /// Jadwal pada hari berjalan (kosong pada Sabtu/Minggu).
-  List<JadwalKuliah> get _jadwalHariIni =>
-      jadwalKuliah[_sekarang.weekday] ?? const <JadwalKuliah>[];
+  /// Jadwal pada hari berjalan mengambil dari JadwalViewModel
+  List<JadwalKuliah> get _jadwalHariIni {
+    final jadwalMap = context.watch<JadwalViewModel>().jadwalKuliah;
+    return jadwalMap[_sekarang.weekday] ?? <JadwalKuliah>[];
+  }
 
   /// Kuliah yang sedang berlangsung saat ini (null jika tidak ada).
   JadwalKuliah? get _kuliahBerlangsung {
@@ -115,13 +117,6 @@ class _DashboardPageState extends State<DashboardPage>
     await _muatStatusDraft();
   }
 
-  /// Navigator.push -> Daftar semua catatan.
-  void _bukaDaftar() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => DaftarCatatanPage(now: widget.now)),
-    );
-  }
 
   /// Navigator.push -> Detail sebuah catatan.
   void _bukaDetail(HasilCatatan catatan) {
@@ -222,12 +217,6 @@ class _DashboardPageState extends State<DashboardPage>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _infoHari(jadwalHariIni.length),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _bukaDaftar,
-              icon: const Icon(Icons.list_alt),
-              label: const Text('LIHAT SEMUA CATATAN'),
-            ),
             if (berlangsung != null) _kartuSekarang(berlangsung),
             const SizedBox(height: 16),
             Text('Mata kuliah hari ini', style: judul),

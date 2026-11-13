@@ -164,15 +164,6 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
           Expanded(child: isi),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => bukaFormDariDaftar(
-          context,
-          now: widget.now,
-          pesanSukses: 'Catatan berhasil disimpan',
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
-      ),
     );
   }
 }

@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Tambahkan import provider
 
 import '../data/jadwal.dart';
 import 'tambah_catatan_page.dart' as form;
 
 /// Alur workbook: Daftar -> Form (tombol +), lalu Form kembali ke Daftar.
 Future<void> bukaFormDariDaftar(
-  BuildContext context, {
-  required String pesanSukses,
-  DateTime Function()? now,
-}) async {
+    BuildContext context, {
+      required String pesanSukses,
+      DateTime Function()? now,
+    }) async {
   final sekarang = (now ?? DateTime.now)();
-  final jadwal = jadwalKuliah[sekarang.weekday] ?? const <JadwalKuliah>[];
+
+  // PERUBAHAN: Ambil data jadwal dari JadwalViewModel melalui Provider
+  final jadwalMap = context.read<JadwalViewModel>().jadwalKuliah;
+  final jadwal = jadwalMap[sekarang.weekday] ?? <JadwalKuliah>[]; // Hapus 'const'
+
   final messenger = ScaffoldMessenger.of(context);
 
   if (jadwal.isEmpty) {
@@ -28,22 +33,22 @@ Future<void> bukaFormDariDaftar(
   final JadwalKuliah? pilihan = jadwal.length == 1
       ? jadwal.first
       : await showModalBottomSheet<JadwalKuliah>(
-          context: context,
-          builder: (ctx) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const ListTile(title: Text('Pilih mata kuliah')),
-                for (final j in jadwal)
-                  ListTile(
-                    title: Text(j.nama),
-                    subtitle: Text(j.jamTeks),
-                    onTap: () => Navigator.pop(ctx, j),
-                  ),
-              ],
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ListTile(title: Text('Pilih mata kuliah')),
+          for (final j in jadwal)
+            ListTile(
+              title: Text(j.nama),
+              subtitle: Text(j.jamTeks),
+              onTap: () => Navigator.pop(ctx, j),
             ),
-          ),
-        );
+        ],
+      ),
+    ),
+  );
   if (pilihan == null || !context.mounted) return;
 
   final tersimpan = await Navigator.push<bool>(
