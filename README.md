@@ -56,17 +56,17 @@ Aplikasi catatan perkuliahan Android yang dibangun dengan **Flutter**. Catatan d
 
 ## Cuplikan Layar
 
-|                            Dashboard                            |                                     Form tambah                                     |                                   Validasi form kosong                                    |
-|:---------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------:|
-| <img src="screenshots/beranda.jpg" width="200" alt="Dashboard"> | <img src="screenshots/formtambahcatatan.jpg" width="200" alt="Form tambah catatan"> | <img src="screenshots/formtambahcatatanerror.jpg" width="200" alt="Validasi form kosong"> |
+|                          Dashboard                           |                                     Form tambah                                      |                                    Validasi form kosong                                    |
+|:------------------------------------------------------------:|:------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------:|
+| <img src="beranda1/beranda.jpg" width="200" alt="Dashboard"> | <img src="screenshots/formtambahcatatan1.jpg" width="200" alt="Form tambah catatan"> | <img src="screenshots/formtambahcatatanerror1.jpg" width="200" alt="Validasi form kosong"> |
 
-|                              Semua catatan                               |                               Detail catatan                               |                              Ubah catatan                              |
-|:------------------------------------------------------------------------:|:--------------------------------------------------------------------------:|:----------------------------------------------------------------------:|
-| <img src="screenshots/semuacatatan.jpg" width="200" alt="Semua catatan"> | <img src="screenshots/detailcatatan.jpg" width="200" alt="Detail catatan"> | <img src="screenshots/ubahcatatan.jpg" width="200" alt="Ubah catatan"> |
+|                               Semua catatan                               |                               Detail catatan                                |                              Ubah catatan                               |
+|:-------------------------------------------------------------------------:|:---------------------------------------------------------------------------:|:-----------------------------------------------------------------------:|
+| <img src="screenshots/daftarcatatan.jpg" width="200" alt="Semua catatan"> | <img src="screenshots/detailcatatan1.jpg" width="200" alt="Detail catatan"> | <img src="screenshots/ubahcatatan1.jpg" width="200" alt="Ubah catatan"> |
 
-|                              Dialog hapus                              |
-|:----------------------------------------------------------------------:|
-| <img src="screenshots/dialoghapus.jpg" width="200" alt="Dialog hapus"> |
+|                                Dialog hapus                                 |
+|:---------------------------------------------------------------------------:|
+| <img src="screenshots/konfirmasihapus1.jpg" width="200" alt="Dialog hapus"> |
 
 ---
 
@@ -180,16 +180,25 @@ StudyLog/
 │   ├── models/
 │   │   └── catatan.dart              # Model catatan + toMap()/fromMap()
 │   ├── theme/
+│   │   ├── desain.dart
 │   │   └── warna_mata_kuliah.dart    # Warna unik setiap mata kuliah
 │   ├── viewmodels/
-│   │   └── catatan_view_model.dart   # CatatanViewModel (ChangeNotifier), UrutanCatatan
+│   │   ├── catatan_view_model.dart   # CatatanViewModel (ChangeNotifier), UrutanCatatan
+│   │   ├── jadwal_view_model.dart    # JadwalViewModel (ChangeNotifier)
 │   ├── screens/
 │   │   ├── dashboard_page.dart       # Beranda: jam real time, mata kuliah hari ini
 │   │   ├── daftar_catatan_page.dart  # Semua Catatan: cari + urutkan
 │   │   ├── detail_catatan_page.dart  # Detail: isi lengkap, UBAH, HAPUS
-│   │   └── tambah_catatan_page.dart  # Form tambah/ubah, validasi, draft
+│   │   ├── tambah_catatan_page.dart  # Form tambah/ubah, validasi, draft
+│   │   ├── home_shell.dart 
+│   │   ├── jadwal_page.dart
+│   │   ├── kelola_jadwal_page.dart
+│   │   └── tambah_dari_daftar.dart
 │   └── widgets/
 │       ├── mata_kuliah_card.dart     # Card mata kuliah + tombol tambah catatan
+│       ├── dialog_pindah_kelas.dart
+│       ├── editor_jadwal_dialog.dart
+│       ├── pemilih_tanggal.dart
 │       └── catatan_card.dart         # Card catatan berwarna (dapat diketuk)
 ├── test/                             # Pengujian unit dan widget (lihat bagian Pengujian)
 ├── screenshots/                      # Bukti tangkapan layar
