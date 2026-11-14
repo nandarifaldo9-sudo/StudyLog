@@ -32,17 +32,20 @@ Future<MemoriCatatanRepository> isiRepository() async {
   return repo;
 }
 
-/// Beranda -> LIHAT SEMUA CATATAN.
-Future<void> bukaDaftar(WidgetTester tester) async {
+/// Buka tab Catatan.
+Future<void> bukaDaftar(
+  WidgetTester tester, {
+  MemoriCatatanRepository? repository,
+}) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  final repo = await isiRepository();
+  final repo = repository ?? await isiRepository();
   await tester.pumpWidget(StudyLogApp(now: () => rabu, repository: repo));
   await tester.pumpAndSettle();
 
-  await tester.tap(find.text('LIHAT SEMUA CATATAN'));
+  await tester.tap(find.text('Catatan'));
   await tester.pumpAndSettle();
 }
 
@@ -85,6 +88,12 @@ void main() {
     test('isi catatan tidak ikut dicari', () {
       expect(store.telusuri('Geser'), isEmpty);
     });
+
+    test('filter mata kuliah diterapkan bersama kata kunci', () {
+      final hasil = store.telusuri('', mataKuliah: 'Kriptografi');
+      expect(hasil.map((c) => c.judul).toList(), ['Vigenere', 'Caesar Cipher']);
+      expect(store.telusuri('topologi', mataKuliah: 'Kriptografi'), isEmpty);
+    });
   });
 
   testWidgets('Sebelum mencari: semua catatan tampil', (tester) async {
@@ -111,6 +120,37 @@ void main() {
 
     expect(find.byType(CatatanCard), findsNWidgets(2));
     expect(find.text('Topologi WLAN'), findsNothing);
+  });
+
+  testWidgets('Filter menyertakan mata kuliah khusus yang sudah dicatat', (
+    tester,
+  ) async {
+    final repo = await isiRepository();
+    await repo.tambah(
+      mataKuliah: 'Kelas Pilihan',
+      judul: 'Catatan kelas pilihan',
+      isi: 'Materi.',
+      waktu: rabu,
+    );
+    await bukaDaftar(tester, repository: repo);
+
+    final filter = find.byKey(const Key('filter_Kelas Pilihan'));
+    await tester.scrollUntilVisible(
+      filter,
+      200,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('filterScroll')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.ensureVisible(filter);
+    await tester.pumpAndSettle();
+    expect(filter, findsOneWidget);
+    await tester.tap(filter);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CatatanCard), findsOneWidget);
+    expect(find.text('Catatan kelas pilihan'), findsOneWidget);
   });
 
   testWidgets('Tidak ada yang cocok: tampil pesan', (tester) async {

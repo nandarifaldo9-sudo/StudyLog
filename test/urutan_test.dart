@@ -50,6 +50,32 @@ void main() {
     ]);
   });
 
+  test('waktu sama tetap terurut berdasarkan id', () async {
+    final waktuSama = DateTime(2026, 10, 28, 19);
+    final repo = MemoriCatatanRepository();
+    await repo.tambah(
+      mataKuliah: 'Kriptografi',
+      judul: 'A',
+      isi: 'a',
+      waktu: waktuSama,
+    );
+    await repo.tambah(
+      mataKuliah: 'Kriptografi',
+      judul: 'B',
+      isi: 'b',
+      waktu: waktuSama,
+    );
+    final store = CatatanViewModel(repo);
+    await store.muat();
+
+    expect(judul(store.telusuri('')), ['B', 'A']);
+    expect(judul(store.telusuri('', urutan: UrutanCatatan.terlama)), [
+      'A',
+      'B',
+    ]);
+    store.dispose();
+  });
+
   test('urutan tetap berlaku bersama pencarian', () {
     expect(judul(vm.telusuri('Kriptografi', urutan: UrutanCatatan.terlama)), [
       'A',
@@ -85,10 +111,10 @@ void main() {
       waktu: DateTime(2026, 10, 28, 19),
     );
     await tester.pumpWidget(
-      StudyLogApp(now: () => DateTime(2026, 10, 28, 8), repository: repo),
+      StudyLogApp(now: () => DateTime(2026, 10, 28, 20), repository: repo),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('LIHAT SEMUA CATATAN'));
+    await tester.tap(find.text('Catatan'));
     await tester.pumpAndSettle();
 
     List<String> judulKartu() => tester
@@ -97,14 +123,12 @@ void main() {
         .toList();
 
     expect(judulKartu(), ['C', 'B', 'A']);
-    expect(find.text('Total 3 catatan • Terbaru dulu'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('menuUrutan')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Terlama dulu'));
     await tester.pumpAndSettle();
     expect(judulKartu(), ['A', 'B', 'C']);
-    expect(find.text('Total 3 catatan • Terlama dulu'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('kolomCari')), 'Kriptografi');
     await tester.pumpAndSettle();
@@ -116,6 +140,5 @@ void main() {
     await tester.tap(find.text('Terbaru dulu'));
     await tester.pumpAndSettle();
     expect(judulKartu(), ['B', 'A']);
-    expect(find.text('Total 3 catatan • Terbaru dulu'), findsOneWidget);
   });
 }

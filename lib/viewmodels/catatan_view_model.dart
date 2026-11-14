@@ -34,6 +34,31 @@ class CatatanViewModel extends ChangeNotifier {
   int jumlahUntuk(String mataKuliah) =>
       _data.where((c) => c.mataKuliah == mataKuliah).length;
 
+  /// Jumlah catatan sejak Senin 00:00 pada minggu [sekarang].
+  int jumlahMingguIni(DateTime sekarang) {
+    final senin = DateTime(
+      sekarang.year,
+      sekarang.month,
+      sekarang.day - (sekarang.weekday - 1),
+    );
+    return _data
+        .where((c) => !c.waktu.isBefore(senin) && !c.waktu.isAfter(sekarang))
+        .length;
+  }
+
+  /// Apakah mata kuliah ini sudah punya catatan pada hari [sekarang].
+  bool adaCatatanHariIni(String mataKuliah, DateTime sekarang) => _data.any(
+    (c) =>
+        c.mataKuliah == mataKuliah &&
+        c.waktu.year == sekarang.year &&
+        c.waktu.month == sekarang.month &&
+        c.waktu.day == sekarang.day,
+  );
+
+  /// [n] catatan terbaru.
+  List<HasilCatatan> terbaru([int n = 3]) =>
+      n <= 0 ? const [] : _data.take(n).toList();
+
   HasilCatatan? cari(int id) {
     for (final c in _data) {
       if (c.id == id) return c;
@@ -41,22 +66,20 @@ class CatatanViewModel extends ChangeNotifier {
     return null;
   }
 
-  /// Pencarian + urutan. Data di memori selalu terbaru di atas,
-  /// jadi "terlama" cukup dengan membalik hasilnya.
+  /// Pencarian + filter mata kuliah + urutan. Data di memori selalu
+  /// terbaru di atas, jadi "terlama" cukup dengan membalik hasilnya.
   List<HasilCatatan> telusuri(
     String kataKunci, {
     UrutanCatatan urutan = UrutanCatatan.terbaru,
+    String? mataKuliah,
   }) {
     final kunci = kataKunci.trim().toLowerCase();
-    final hasil = kunci.isEmpty
-        ? List<HasilCatatan>.of(_data)
-        : _data
-              .where(
-                (c) =>
-                    c.judul.toLowerCase().contains(kunci) ||
-                    c.mataKuliah.toLowerCase().contains(kunci),
-              )
-              .toList();
+    final hasil = _data.where((c) {
+      if (mataKuliah != null && c.mataKuliah != mataKuliah) return false;
+      if (kunci.isEmpty) return true;
+      return c.judul.toLowerCase().contains(kunci) ||
+          c.mataKuliah.toLowerCase().contains(kunci);
+    }).toList();
     return urutan == UrutanCatatan.terbaru ? hasil : hasil.reversed.toList();
   }
 
@@ -70,6 +93,7 @@ class CatatanViewModel extends ChangeNotifier {
       _data
         ..clear()
         ..addAll(hasil);
+      _urutkanTerbaru();
     } catch (e) {
       _galat = 'Gagal memuat catatan: $e';
     } finally {
@@ -90,7 +114,8 @@ class CatatanViewModel extends ChangeNotifier {
       isi: isi,
       waktu: waktu,
     );
-    _data.insert(0, baru);
+    _data.add(baru);
+    _urutkanTerbaru();
     _beritahu();
   }
 
@@ -115,6 +140,13 @@ class CatatanViewModel extends ChangeNotifier {
 
   void _beritahu() {
     if (!_disposed) notifyListeners();
+  }
+
+  void _urutkanTerbaru() {
+    _data.sort((a, b) {
+      final waktu = b.waktu.compareTo(a.waktu);
+      return waktu != 0 ? waktu : b.id.compareTo(a.id);
+    });
   }
 
   @override

@@ -7,7 +7,7 @@ import '../viewmodels/catatan_view_model.dart';
 import '../theme/warna_mata_kuliah.dart';
 import 'tambah_catatan_page.dart';
 
-/// Layar Detail: isi lengkap catatan, dengan aksi UBAH dan HAPUS.
+/// Layar detail: isi lengkap catatan dan aksi pengelolaan.
 class DetailCatatanPage extends StatelessWidget {
   /// Catatan saat layar dibuka. Versi terbaru selalu dibaca dari store;
   /// objek ini hanya cadangan saat catatan baru saja dihapus.
@@ -16,14 +16,14 @@ class DetailCatatanPage extends StatelessWidget {
   const DetailCatatanPage({super.key, required this.catatan});
 
   Future<void> _ubah(BuildContext context, HasilCatatan c) async {
-    final berhasil = await Navigator.push<bool>(
+    final hasil = await Navigator.push<HasilSimpanCatatan>(
       context,
       MaterialPageRoute(
         builder: (_) =>
             TambahCatatanPage(mataKuliah: c.mataKuliah, catatanAwal: c),
       ),
     );
-    if (berhasil == true && context.mounted) {
+    if (hasil != null && context.mounted) {
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
@@ -37,15 +37,15 @@ class DetailCatatanPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus catatan?'),
-        content: Text('Catatan "${c.judul}" akan dihapus dari daftar.'),
+        content: const Text('Catatan ini akan dihapus permanen.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('BATAL'),
+            child: const Text('Batal'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('HAPUS'),
+            child: const Text('Hapus'),
           ),
         ],
       ),
@@ -87,54 +87,79 @@ class DetailCatatanPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: warna,
-                borderRadius: BorderRadius.circular(12),
+                color: warna.withAlpha(24),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.menu_book, color: Colors.white),
-                  const SizedBox(width: 12),
+                  Icon(Icons.menu_book_outlined, color: warna),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       c.mataKuliah,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      style: TextStyle(
+                        color: warna,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(c.judul, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 4),
+            const SizedBox(height: 20),
             Text(
-              formatWaktuCatatan(c.waktu),
-              style: Theme.of(context).textTheme.bodySmall,
+              c.judul,
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 16),
-            Text(c.isi, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 32),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${formatTanggalLengkap(c.waktu)} • ${formatJam(c.waktu)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  c.isi,
+                  style: Theme.of(context).textTheme.bodyLarge
+                      ?.copyWith(height: 1.55),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: OutlinedButton.icon(
                     onPressed: () => _ubah(context, c),
-                    child: const Text('UBAH'),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Ubah'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
+                  child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.red.shade700,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () => _hapus(context, c),
-                    child: const Text('HAPUS'),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Hapus'),
                   ),
                 ),
               ],

@@ -1,117 +1,346 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../data/jadwal.dart';
 
-class JadwalPage extends StatelessWidget {
-  const JadwalPage({super.key});
+import '../data/jadwal.dart';
+import '../theme/warna_mata_kuliah.dart';
+import '../viewmodels/catatan_view_model.dart';
+import '../viewmodels/jadwal_view_model.dart';
+import '../widgets/pemilih_tanggal.dart';
+import 'kelola_jadwal_page.dart';
+
+class JadwalPage extends StatefulWidget {
+  final DateTime sekarang;
+  final Set<String> adaDraft;
+  final void Function(JadwalKuliah, DateTime) onTambahCatatan;
+
+  const JadwalPage({
+    super.key,
+    required this.sekarang,
+    required this.adaDraft,
+    required this.onTambahCatatan,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final jadwalStore = context.watch<JadwalViewModel>();
-    final jadwalMap = jadwalStore.jadwalKuliah;
+  State<JadwalPage> createState() => _JadwalPageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kelola Jadwal')),
-      body: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 80),
-        itemCount: 7,
-        itemBuilder: (context, index) {
-          final hariIndex = index + 1; // 1 = Senin, 7 = Minggu
-          final hariName = namaHari[index];
-          final listJadwal = jadwalMap[hariIndex] ?? [];
+class _JadwalPageState extends State<JadwalPage> {
+  late DateTime _tanggalDipilih = widget.sekarang;
 
-          return ExpansionTile(
-            title: Text(hariName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${listJadwal.length} Mata Kuliah'),
-            children: [
-              for (final j in listJadwal)
-                ListTile(
-                  leading: const Icon(Icons.book),
-                  title: Text(j.nama),
-                  subtitle: Text('${j.kode} • ${j.jamTeks}'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => jadwalStore.hapusJadwal(hariIndex, j),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: OutlinedButton.icon(
-                  onPressed: () => _tampilDialogTambah(context, hariIndex),
-                  icon: const Icon(Icons.add),
-                  label: Text('Tambah Jadwal di hari $hariName'),
-                ),
-              )
-            ],
-          );
-        },
+  @override
+  void didUpdateWidget(covariant JadwalPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!hariSama(oldWidget.sekarang, widget.sekarang) &&
+        hariSama(_tanggalDipilih, oldWidget.sekarang)) {
+      _tanggalDipilih = DateTime(
+        widget.sekarang.year,
+        widget.sekarang.month,
+        widget.sekarang.day,
+      );
+    }
+  }
+
+  Future<void> _pilihTanggal() async {
+    final tanggal = await pilihTanggalAkademik(
+      context: context,
+      tanggalAwal: _tanggalDipilih,
+      sekarang: widget.sekarang,
+    );
+    if (tanggal == null || !mounted) return;
+    setState(() => _tanggalDipilih = tanggal);
+  }
+
+  Future<void> _kelolaJadwal() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => KelolaJadwalPage(
+          tanggalAwal: _tanggalDipilih,
+          sekarang: widget.sekarang,
+        ),
       ),
     );
   }
 
-  void _tampilDialogTambah(BuildContext context, int hariIndex) {
-    final kodeCtrl = TextEditingController();
-    final namaCtrl = TextEditingController();
-    TimeOfDay mulaiWaktu = const TimeOfDay(hour: 8, minute: 0);
-    TimeOfDay selesaiWaktu = const TimeOfDay(hour: 10, minute: 0);
+  void _geserTanggal(int hari) {
+    setState(() {
+      _tanggalDipilih = DateTime(
+        _tanggalDipilih.year,
+        _tanggalDipilih.month,
+        _tanggalDipilih.day + hari,
+      );
+    });
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Tambah Jadwal (${namaHari[hariIndex - 1]})'),
-              content: SingleChildScrollView(
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<CatatanViewModel>();
+    final jadwalVm = context.watch<JadwalViewModel>();
+    final tema = Theme.of(context);
+    final hariIni = hariSama(_tanggalDipilih, widget.sekarang);
+    final daftar = jadwalVm.jadwalUntukTanggal(_tanggalDipilih);
+    final infoLibur = namaHariLibur(_tanggalDipilih);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Jadwal Kuliah'),
+        actions: [
+          IconButton(
+            key: const Key('kelolaJadwal'),
+            tooltip: 'Kelola jadwal kuliah',
+            onPressed: jadwalVm.sedangMemuat ? null : _kelolaJadwal,
+            icon: const Icon(Icons.edit_calendar_outlined),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        children: [
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Hari sebelumnya',
+                onPressed: () => _geserTanggal(-1),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('pilihTanggalJadwal'),
+                  onPressed: _pilihTanggal,
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    formatTanggalPendek(_tanggalDipilih),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Hari berikutnya',
+                onPressed: () => _geserTanggal(1),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (jadwalVm.galat != null) ...[
+            Card(
+              color: tema.colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(controller: kodeCtrl, decoration: const InputDecoration(labelText: 'Kode MK (Opsional)')),
-                    TextField(controller: namaCtrl, decoration: const InputDecoration(labelText: 'Nama Mata Kuliah')),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () async {
-                              final time = await showTimePicker(context: context, initialTime: mulaiWaktu);
-                              if (time != null) setState(() => mulaiWaktu = time);
-                            },
-                            child: Text('Mulai:\n${mulaiWaktu.format(context)}', textAlign: TextAlign.center),
-                          ),
-                        ),
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () async {
-                              final time = await showTimePicker(context: context, initialTime: selesaiWaktu);
-                              if (time != null) setState(() => selesaiWaktu = time);
-                            },
-                            child: Text('Selesai:\n${selesaiWaktu.format(context)}', textAlign: TextAlign.center),
-                          ),
-                        ),
-                      ],
-                    )
+                    Text(jadwalVm.galat!),
+                    TextButton(
+                      onPressed: jadwalVm.sedangMemuat
+                          ? null
+                          : jadwalVm.muat,
+                      child: const Text('Coba muat ulang'),
+                    ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-                FilledButton(
-                  onPressed: () {
-                    if (namaCtrl.text.trim().isEmpty) return;
-                    final j = JadwalKuliah(
-                      kode: kodeCtrl.text.trim().isEmpty ? '-' : kodeCtrl.text.trim(),
-                      nama: namaCtrl.text.trim(),
-                      mulai: mulaiWaktu.hour * 60 + mulaiWaktu.minute,
-                      selesai: selesaiWaktu.hour * 60 + selesaiWaktu.minute,
-                    );
-                    context.read<JadwalViewModel>().tambahJadwal(hariIndex, j);
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Simpan'),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (infoLibur != null &&
+              _tanggalDipilih.weekday != DateTime.sunday) ...[
+            Card(
+              color: tema.colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.event_busy,
+                      color: tema.colorScheme.error,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        infoLibur,
+                        style: TextStyle(
+                          color: tema.colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            );
-          }
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Text(
+            '${namaHari[_tanggalDipilih.weekday - 1]} • ${daftar.length} mata kuliah',
+            style: tema.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (daftar.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.event_busy_outlined,
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Tidak ada jadwal untuk tanggal ini'),
+                  ],
+                ),
+              ),
+            )
+          else
+            for (final j in daftar)
+              _KartuJadwal(
+                jadwal: j,
+                status: hariIni ? statusKuliah(j, widget.sekarang) : null,
+                jumlahCatatan: vm.jumlahUntuk(j.nama),
+                adaDraft: widget.adaDraft.contains(j.nama),
+                onTambah: jadwalVm.sedangMemuat
+                        || vm.sedangMemuat
+                        || vm.galat != null
+                    ? null
+                    : () => widget.onTambahCatatan(j, _tanggalDipilih),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KartuJadwal extends StatelessWidget {
+  final JadwalKuliah jadwal;
+  final StatusKuliah? status;
+  final int jumlahCatatan;
+  final bool adaDraft;
+  final VoidCallback? onTambah;
+
+  const _KartuJadwal({
+    required this.jadwal,
+    required this.status,
+    required this.jumlahCatatan,
+    required this.adaDraft,
+    required this.onTambah,
+  });
+
+  Widget _chip(String teks, Color warna) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: warna,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        teks,
+        style: const TextStyle(fontSize: 12, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _chipStatus(StatusKuliah status) {
+    switch (status) {
+      case StatusKuliah.berlangsung:
+        return _chip('Sedang berlangsung', const Color(0xFF2E7D32));
+      case StatusKuliah.akanDatang:
+        return _chip('Akan datang', const Color(0xFF546E7A));
+      case StatusKuliah.selesai:
+        return _chip('Selesai', const Color(0xFF9E9E9E));
+    }
+  }
+
+  Widget _info(IconData ikon, String teks) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(ikon, size: 16, color: Colors.grey.shade700),
+        const SizedBox(width: 4),
+        Text(teks, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final warna = warnaUntuk(jadwal.nama);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 6, color: warna),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.schedule, size: 16, color: warna),
+                            const SizedBox(width: 6),
+                            Text(
+                              jadwal.jamTeks,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: warna,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (status != null) _chipStatus(status!),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      jadwal.nama,
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      jadwal.kode,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        _info(Icons.edit_note, '$jumlahCatatan catatan'),
+                        if (adaDraft) _info(Icons.drafts_outlined, 'Ada draft'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: warna),
+                        onPressed: onTambah,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Tambah catatan'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

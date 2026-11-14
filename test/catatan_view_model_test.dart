@@ -79,6 +79,117 @@ void main() {
     expect(store.jumlahUntuk('Penalaran Komputer'), 0);
   });
 
+  test('jumlahMingguIni dimulai Senin pukul 00:00', () async {
+    await store.tambah(
+      mataKuliah: 'Kriptografi',
+      judul: 'Minggu lalu',
+      isi: '',
+      waktu: DateTime(2026, 10, 25, 23, 59),
+    );
+    await store.tambah(
+      mataKuliah: 'Kriptografi',
+      judul: 'Awal minggu',
+      isi: '',
+      waktu: DateTime(2026, 10, 26),
+    );
+    await store.tambah(
+      mataKuliah: 'Kriptografi',
+      judul: 'Minggu ini',
+      isi: '',
+      waktu: DateTime(2026, 10, 28, 7, 59),
+    );
+    await store.tambah(
+      mataKuliah: 'Kriptografi',
+      judul: 'Catatan mendatang',
+      isi: '',
+      waktu: DateTime(2026, 10, 28, 12),
+    );
+
+    expect(store.jumlahMingguIni(DateTime(2026, 10, 28, 8)), 2);
+  });
+
+  test(
+    'adaCatatanHariIni mencocokkan mata kuliah dan tanggal kalender',
+    () async {
+      await store.tambah(
+        mataKuliah: 'Kriptografi',
+        judul: 'A',
+        isi: '',
+        waktu: DateTime(2026, 10, 28, 19, 30),
+      );
+
+      expect(
+        store.adaCatatanHariIni('Kriptografi', DateTime(2026, 10, 28, 8)),
+        isTrue,
+      );
+      expect(
+        store.adaCatatanHariIni('Jaringan Nirkabel', DateTime(2026, 10, 28)),
+        isFalse,
+      );
+      expect(
+        store.adaCatatanHariIni('Kriptografi', DateTime(2026, 10, 29)),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'terbaru mengembalikan tiga catatan dan menerima batas khusus',
+    () async {
+      for (final judul in ['A', 'B', 'C', 'D']) {
+        await store.tambah(
+          mataKuliah: 'Kriptografi',
+          judul: judul,
+          isi: '',
+          waktu: waktu,
+        );
+      }
+
+      expect(store.terbaru().map((c) => c.judul), ['D', 'C', 'B']);
+      expect(store.terbaru(1).map((c) => c.judul), ['D']);
+      expect(store.terbaru(0), isEmpty);
+      expect(store.terbaru(-1), isEmpty);
+    },
+  );
+
+  test(
+    'catatan yang diinput terlambat tetap diurutkan menurut waktunya',
+    () async {
+      await store.tambah(
+        mataKuliah: 'Kriptografi',
+        judul: 'Senin',
+        isi: '',
+        waktu: DateTime(2026, 10, 26),
+      );
+      await store.tambah(
+        mataKuliah: 'Kriptografi',
+        judul: 'Rabu',
+        isi: '',
+        waktu: DateTime(2026, 10, 28),
+      );
+      await store.tambah(
+        mataKuliah: 'Kriptografi',
+        judul: 'Selasa, terlambat diinput',
+        isi: '',
+        waktu: DateTime(2026, 10, 27),
+      );
+
+      expect(store.semua.map((c) => c.judul), [
+        'Rabu',
+        'Selasa, terlambat diinput',
+        'Senin',
+      ]);
+
+      final storeBaru = CatatanViewModel(repo);
+      await storeBaru.muat();
+      expect(storeBaru.semua.map((c) => c.judul), [
+        'Rabu',
+        'Selasa, terlambat diinput',
+        'Senin',
+      ]);
+    },
+  );
+
   test('ubah mengganti judul dan isi tanpa mengubah id dan waktu', () async {
     await store.tambah(
       mataKuliah: 'Kriptografi',
