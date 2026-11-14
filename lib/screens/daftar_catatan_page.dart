@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../theme/desain.dart';
 import '../theme/warna_mata_kuliah.dart';
 import '../viewmodels/catatan_view_model.dart';
 import '../viewmodels/jadwal_view_model.dart';
@@ -73,22 +74,21 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
         label: Text('$label ($jumlah)'),
         selected: dipilih,
         showCheckmark: false,
-        selectedColor: warna.withAlpha(40),
+        shape: const StadiumBorder(),
+        selectedColor: warna.withAlpha(36),
         backgroundColor: Colors.white,
-        side: BorderSide(color: dipilih ? warna : const Color(0xFFE6E8F0)),
+        side: BorderSide(color: dipilih ? warna : Desain.garis),
         labelStyle: TextStyle(
-          color: dipilih ? warna : null,
-          fontWeight: dipilih ? FontWeight.bold : FontWeight.normal,
+          color: dipilih ? warna : Desain.teksRedup,
+          fontWeight: dipilih ? FontWeight.w700 : FontWeight.w500,
+          fontSize: 13,
         ),
         onSelected: (_) => onTap(),
       ),
     );
   }
 
-  Widget _barisFilter(
-    CatatanViewModel vm,
-    JadwalViewModel jadwalViewModel,
-  ) {
+  Widget _barisFilter(CatatanViewModel vm, JadwalViewModel jadwalViewModel) {
     final mataKuliah = {
       ...warnaMataKuliah.keys,
       ...jadwalViewModel.semuaMataKuliah,
@@ -121,25 +121,8 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
     );
   }
 
-  Widget _pesan(String teks) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.sticky_note_2_outlined,
-              size: 36,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 12),
-            Text(teks, textAlign: TextAlign.center),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _pesan(String teks) =>
+      KeadaanKosong(ikon: Icons.sticky_note_2_outlined, judul: teks);
 
   @override
   Widget build(BuildContext context) {

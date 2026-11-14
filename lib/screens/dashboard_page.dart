@@ -2,11 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/jadwal.dart';
+import '../theme/desain.dart';
 import '../theme/warna_mata_kuliah.dart';
 import '../viewmodels/catatan_view_model.dart';
 import '../viewmodels/jadwal_view_model.dart';
 import '../widgets/catatan_card.dart';
 import 'detail_catatan_page.dart';
+
+String _formatSisa(int menit) {
+  if (menit < 60) return '$menit menit';
+  final jam = menit ~/ 60;
+  final sisa = menit % 60;
+  return sisa == 0 ? '$jam jam' : '$jam jam $sisa menit';
+}
+
+Widget _lingkaran(double ukuran, int alpha) => Container(
+  width: ukuran,
+  height: ukuran,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    color: Colors.white.withAlpha(alpha),
+  ),
+);
 
 class DashboardPage extends StatelessWidget {
   final DateTime sekarang;
@@ -79,30 +96,34 @@ class DashboardPage extends StatelessWidget {
     JadwalKuliah jadwal,
     DateTime tanggal,
     bool bisaMencatat,
-  ) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+  ) {
+    final tema = Theme.of(context);
+    return KartuBerbayang(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Kelas khusus berikutnya',
-            style: Theme.of(context).textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
+          Lencana(
+            teks: 'Kelas khusus berikutnya',
+            warna: tema.colorScheme.primary,
+            ikon: Icons.event_available,
           ),
-          const SizedBox(height: 8),
-          Text(jadwal.nama, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          Text(
+            jadwal.nama,
+            style: tema.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
           Text(
             '${formatTanggalLengkap(tanggal)} • ${jadwal.jamTeks}',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: tema.textTheme.bodySmall?.copyWith(color: Desain.teksRedup),
           ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
-              onPressed: jadwalViewModel.sedangMemuat
-                  || !bisaMencatat
+              onPressed: jadwalViewModel.sedangMemuat || !bisaMencatat
                   ? null
                   : () => onTambahCatatan(jadwal, tanggal),
               icon: const Icon(Icons.edit_note),
@@ -111,8 +132,8 @@ class DashboardPage extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 
   Widget _kartuUtama(
     BuildContext context,
@@ -133,92 +154,123 @@ class DashboardPage extends StatelessWidget {
     } else if (berikut != null) {
       j = berikut.$1;
       tanggal = berikut.$2;
-      final hariIni =
-          tanggal.year == sekarang.year &&
-          tanggal.month == sekarang.month &&
-          tanggal.day == sekarang.day;
+      final hariIni = hariSama(tanggal, sekarang);
       label = hariIni
           ? 'Berikutnya hari ini'
           : 'Kuliah berikutnya • ${namaHari[tanggal.weekday - 1]}';
     } else {
-      return const Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Text('Belum ada jadwal kuliah.'),
-        ),
+      return const KartuBerbayang(
+        padding: EdgeInsets.all(20),
+        child: Text('Belum ada jadwal kuliah.'),
       );
     }
 
     final warna = warnaUntuk(j.nama);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [warna, Color.lerp(warna, Colors.black, 0.3)!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final menitSekarang = sekarang.hour * 60 + sekarang.minute;
+    final hariIni = hariSama(tanggal, sekarang);
+    final sedangBerlangsung = berlangsung != null;
+    const putihRedup = TextStyle(color: Colors.white70, fontSize: 13);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [warna, Color.lerp(warna, Colors.black, 0.35)!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(45),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            j.nama,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.schedule, size: 16, color: Colors.white70),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  '${j.jamTeks} • ${j.kode}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70),
-                ),
+        child: Stack(
+          children: [
+            Positioned(right: -36, top: -36, child: _lingkaran(140, 24)),
+            Positioned(right: 48, bottom: -56, child: _lingkaran(112, 16)),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Lencana(
+                    teks: label,
+                    warna: Colors.white,
+                    ikon: sedangBerlangsung
+                        ? Icons.play_circle_outline
+                        : Icons.schedule,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    j.nama,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.schedule,
+                        size: 16,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${j.jamTeks} • ${j.kode}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: putihRedup,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (sedangBerlangsung) ...[
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: ((menitSekarang - j.mulai) / (j.selesai - j.mulai))
+                          .clamp(0.0, 1.0)
+                          .toDouble(),
+                      minHeight: 6,
+                      color: Colors.white,
+                      backgroundColor: Colors.white24,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Sisa ${_formatSisa(j.selesai - menitSekarang)}',
+                      style: putihRedup,
+                    ),
+                  ] else if (hariIni) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mulai dalam ${_formatSisa(j.mulai - menitSekarang)}',
+                      style: putihRedup,
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Text(formatTanggalLengkap(tanggal), style: putihRedup),
+                  ],
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: warna,
+                    ),
+                    onPressed: jadwalViewModel.sedangMemuat || !bisaMencatat
+                        ? null
+                        : () => onTambahCatatan(j, tanggal),
+                    icon: const Icon(Icons.edit_note),
+                    label: Text(
+                      hariIni ? 'Catat sekarang' : 'Catat untuk tanggal ini',
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: warna,
             ),
-            onPressed: jadwalViewModel.sedangMemuat
-                || !bisaMencatat
-                ? null
-                : () => onTambahCatatan(j, tanggal),
-            icon: const Icon(Icons.edit_note),
-            label: Text(
-              tanggal.year == sekarang.year &&
-                      tanggal.month == sekarang.month &&
-                      tanggal.day == sekarang.day
-                  ? 'Catat sekarang'
-                  : 'Catat untuk tanggal ini',
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -249,26 +301,48 @@ class DashboardPage extends StatelessWidget {
         .map(vm.jumlahUntuk)
         .fold<int>(0, (a, b) => a > b ? a : b);
     final judul = tema.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.bold,
+      fontWeight: FontWeight.w700,
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('StudyLog')),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_stories_rounded, color: tema.colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('StudyLog'),
+          ],
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
           Text(
             sapaan(sekarang),
             style: tema.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF202638),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            '${formatTanggalLengkap(sekarang)} • ${formatJam(sekarang)}',
-            style: tema.textTheme.bodyMedium?.copyWith(
-              color: tema.colorScheme.onSurfaceVariant,
-            ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_outlined,
+                size: 14,
+                color: Desain.teksRedup,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '${formatTanggalLengkap(sekarang)} • ${formatJam(sekarang)}',
+                  style: tema.textTheme.bodyMedium?.copyWith(
+                    color: Desain.teksRedup,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _kartuUtama(context, jadwalViewModel, jadwal, bisaMencatat),
@@ -351,79 +425,69 @@ class DashboardPage extends StatelessWidget {
             ],
           ),
           if (jadwal.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            const SizedBox(height: 12),
+            KartuBerbayang(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Catatan hari ini',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: judul,
+                        SizedBox.expand(
+                          child: CircularProgressIndicator(
+                            value: sudahDicatat / jadwal.length,
+                            strokeWidth: 7,
+                            strokeCap: StrokeCap.round,
+                            backgroundColor: tema.colorScheme.primary.withAlpha(
+                              30,
+                            ),
                           ),
                         ),
-                        const Spacer(),
                         Text(
                           '$sudahDicatat/${jadwal.length}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    LinearProgressIndicator(
-                      value: sudahDicatat / jadwal.length,
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(8),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Catatan hari ini',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: judul,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$sudahDicatat dari ${jadwal.length} mata kuliah',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: Desain.teksRedup,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '$sudahDicatat dari ${jadwal.length} mata kuliah',
-                      style: tema.textTheme.bodySmall,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Catatan terbaru',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: judul,
-                ),
-              ),
-              TextButton(
-                onPressed: () => onPindahTab(2),
-                child: const Text('Lihat semua'),
-              ),
-            ],
+          JudulBagian(
+            judul: 'Catatan terbaru',
+            aksi: 'Lihat semua',
+            onAksi: () => onPindahTab(2),
           ),
           if (vm.jumlah == 0)
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.sticky_note_2_outlined,
-                      color: tema.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Belum ada catatan'),
-                  ],
-                ),
+            const KartuBerbayang(
+              child: KeadaanKosong(
+                ikon: Icons.sticky_note_2_outlined,
+                judul: 'Belum ada catatan',
+                deskripsi: 'Catatan yang kamu tulis akan muncul di sini.',
               ),
             )
           else
@@ -437,23 +501,17 @@ class DashboardPage extends StatelessWidget {
                   ),
                 ),
               ),
-          const SizedBox(height: 8),
-          Text('Ringkasan per mata kuliah', style: judul),
-          const SizedBox(height: 8),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  for (final mk in namaMataKuliah)
-                    _BarisRingkasan(
-                      nama: mk,
-                      jumlah: vm.jumlahUntuk(mk),
-                      maks: maks,
-                    ),
-                ],
-              ),
+          const JudulBagian(judul: 'Ringkasan per mata kuliah'),
+          KartuBerbayang(
+            child: Column(
+              children: [
+                for (final mk in namaMataKuliah)
+                  _BarisRingkasan(
+                    nama: mk,
+                    jumlah: vm.jumlahUntuk(mk),
+                    maks: maks,
+                  ),
+              ],
             ),
           ),
         ],
@@ -478,42 +536,27 @@ class _KartuStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: warna.withAlpha(30),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(ikon, color: warna, size: 22),
+    return KartuBerbayang(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          KotakIkon(ikon: ikon, warna: warna, ukuran: 36),
+          const SizedBox(height: 12),
+          Text(
+            nilai,
+            style: tema.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    nilai,
-                    style: tema.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: tema.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tema.textTheme.bodySmall?.copyWith(color: Desain.teksRedup),
+          ),
+        ],
       ),
     );
   }
@@ -534,31 +577,38 @@ class _BarisRingkasan extends StatelessWidget {
   Widget build(BuildContext context) {
     final warna = warnaUntuk(nama);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: warna, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   nama,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
               Text(
                 '$jumlah',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           LinearProgressIndicator(
             value: maks == 0 ? 0 : jumlah / maks,
             minHeight: 6,
             color: warna,
-            backgroundColor: warna.withAlpha(30),
+            backgroundColor: warna.withAlpha(28),
             borderRadius: BorderRadius.circular(6),
           ),
         ],
