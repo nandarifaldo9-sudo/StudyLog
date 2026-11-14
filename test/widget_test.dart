@@ -55,14 +55,17 @@ void main() {
     expect(find.text('Catat sekarang'), findsOneWidget);
   });
 
-  testWidgets('Kalender menandai hari libur akademik dan memilih tanggalnya', (
+  testWidgets('Kalender menampilkan deskripsi tanggal merah terpilih', (
     tester,
   ) async {
     await bukaApp(tester, DateTime(2026, 8, 17, 8));
     await tester.tap(find.text('Jadwal'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hari Kemerdekaan RI'), findsOneWidget);
+    expect(
+      find.textContaining('Tanggal merah: Proklamasi Kemerdekaan'),
+      findsOneWidget,
+    );
     final labelTanggal = tester.widget<Text>(
       find.descendant(
         of: find.byKey(const Key('pilihTanggalJadwal')),
@@ -77,10 +80,51 @@ void main() {
     expect(find.byKey(const Key('tanggal_2026-08-25')), findsOneWidget);
     await tester.tap(find.byKey(const Key('tanggal_2026-08-25')));
     await tester.pump();
-    expect(find.text('Hari libur akademik'), findsOneWidget);
+    expect(
+      find.text('Tanggal merah: Maulid Nabi Muhammad S.A.W'),
+      findsOneWidget,
+    );
+    expect(find.text('Tanggal merah (termasuk Minggu)'), findsNothing);
+    expect(find.text('Hari libur akademik'), findsNothing);
     await tester.tap(find.text('Pilih'));
     await tester.pumpAndSettle();
     expect(find.text('25 Agu 2026'), findsOneWidget);
+    expect(find.textContaining('Hari libur akademik:'), findsNothing);
+    expect(
+      find.textContaining('Tanggal merah: Maulid Nabi Muhammad S.A.W'),
+      findsOneWidget,
+    );
+    expect(find.text('Penalaran Komputer'), findsOneWidget);
+  });
+
+  testWidgets('Kalender menampilkan deskripsi cuti bersama', (tester) async {
+    await bukaApp(tester, DateTime(2026, 12, 24, 8));
+    await tester.tap(find.text('Jadwal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pilihTanggalJadwal')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cuti bersama: Kelahiran Yesus Kristus'), findsOneWidget);
+    expect(find.text('Tanggal merah (termasuk Minggu)'), findsNothing);
+    expect(find.text('Hari libur akademik'), findsNothing);
+  });
+
+  testWidgets('Hari Minggu ditandai merah pada kalender', (tester) async {
+    await bukaApp(tester, DateTime(2026, 11, 23, 8));
+    await tester.tap(find.text('Jadwal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pilihTanggalJadwal')));
+    await tester.pumpAndSettle();
+
+    final tanggalMinggu = find.byKey(const Key('tanggal_2026-11-29'));
+    final angkaMinggu = tester.widget<Text>(
+      find.descendant(of: tanggalMinggu, matching: find.text('29')),
+    );
+    expect(angkaMinggu.style?.color, Colors.red.shade800);
+
+    await tester.tap(tanggalMinggu);
+    await tester.pump();
+    expect(find.text('Tanggal merah: Hari Minggu'), findsOneWidget);
   });
 
   testWidgets('Kalender dapat dibuka pada layar ponsel sempit', (tester) async {
@@ -99,7 +143,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Jadwal mingguan yang ada dapat dipindah dan dihapus', (
+  testWidgets('Jadwal mingguan dapat dikecualikan atau dihapus', (
     tester,
   ) async {
     await bukaApp(tester, senin);
@@ -107,22 +151,31 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('kelolaJadwal')));
     await tester.pumpAndSettle();
-    expect(find.text('Tambah mata kuliah'), findsOneWidget);
-    expect(find.text('Tambah mingguan'), findsNothing);
+    expect(find.text('Tambah Jadwal Kelas'), findsOneWidget);
+    expect(find.text('Tambah kelas khusus'), findsNothing);
+    expect(find.text('Tambah jadwal mingguan'), findsNothing);
 
     await tester.tap(find.byKey(const Key('menuMingguan_111500')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ubah atau pindahkan'));
+    expect(find.text('Ubah atau pindahkan'), findsNothing);
+    expect(find.text('Pindahkan hanya tanggal ini'), findsOneWidget);
+    await tester.tap(find.text('Batalkan hanya tanggal ini'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Senin').last);
+    expect(
+      find.textContaining('Dibatalkan hanya pada tanggal ini'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('kembalikan_111500')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Rabu').last);
+    expect(find.text('Sistem Manajemen Basis Data'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('menuMingguan_111500')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('simpanJadwal')));
+    await tester.tap(find.text('Hapus mingguan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hapus').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Sistem Manajemen Basis Data'), findsNothing);
-    expect(find.text('Teknologi Aplikasi Bergerak'), findsOneWidget);
     await tester.tap(find.byKey(const Key('menuMingguan_111600')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hapus mingguan'));
@@ -133,7 +186,40 @@ void main() {
     expect(find.text('Belum ada mata kuliah'), findsOneWidget);
   });
 
-  testWidgets('Kelas untuk satu tanggal ditambahkan dari Kelola Jadwal', (
+  testWidgets('Tambah Jadwal Kelas langsung membuka formulir mata kuliah', (
+    tester,
+  ) async {
+    await bukaApp(tester, DateTime(2026, 11, 29, 8));
+    await tester.tap(find.text('Jadwal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('kelolaJadwal')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('tambahMataKuliah')));
+    await tester.pumpAndSettle();
+    expect(find.text('Tambah mata kuliah'), findsOneWidget);
+    expect(find.text('Jadwal mingguan'), findsNothing);
+    expect(find.text('Kelas khusus'), findsNothing);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Kode mata kuliah'),
+      'WKD901',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nama mata kuliah'),
+      'Kelas Mingguan Minggu',
+    );
+    await tester.tap(find.byKey(const Key('simpanJadwal')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mata kuliah ditambahkan'), findsOneWidget);
+    expect(find.text('Kelas Mingguan Minggu'), findsOneWidget);
+    expect(find.text('Tambah Jadwal Kelas'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Kelas Mingguan Minggu'), findsOneWidget);
+  });
+
+  testWidgets('Mata kuliah ditambahkan langsung untuk hari terpilih', (
     tester,
   ) async {
     await bukaApp(tester, DateTime(2026, 11, 14, 8));
@@ -153,18 +239,23 @@ void main() {
 
     await tester.tap(find.byKey(const Key('tambahMataKuliah')));
     await tester.pumpAndSettle();
+    expect(find.text('Tambah mata kuliah'), findsOneWidget);
+    final pilihanHari = tester.widget<DropdownButtonFormField<int>>(
+      find.byType(DropdownButtonFormField<int>),
+    );
+    expect(pilihanHari.initialValue, DateTime.sunday);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Kode mata kuliah'),
       'SPC902',
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nama mata kuliah'),
-      'Kelas Satu Kali',
+      'Kelas Mingguan Khusus',
     );
     await tester.tap(find.byKey(const Key('simpanJadwal')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Kelas Satu Kali'), findsOneWidget);
+    expect(find.text('Kelas Mingguan Khusus'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pilihTanggalJadwal')));
@@ -172,12 +263,7 @@ void main() {
     await tester.tap(find.byKey(const Key('tanggal_2026-11-29')));
     await tester.tap(find.text('Pilih'));
     await tester.pumpAndSettle();
-    expect(find.text('Kelas Satu Kali'), findsOneWidget);
-    await tester.tap(find.text('Dashboard'));
-    await tester.pumpAndSettle();
-    expect(find.text('Kelas khusus berikutnya'), findsOneWidget);
-    expect(find.text('Kelas Satu Kali'), findsWidgets);
-    expect(find.textContaining('Minggu, 29 November 2026'), findsOneWidget);
+    expect(find.text('Kelas Mingguan Khusus'), findsOneWidget);
   });
 
   testWidgets('Halaman Jadwal tidak menampilkan card Hari Minggu', (

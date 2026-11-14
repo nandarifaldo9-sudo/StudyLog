@@ -96,7 +96,12 @@ class _JadwalPageState extends State<JadwalPage> {
                   DateTime(senin.year, senin.month, senin.day + i),
                   widget.sekarang,
                 ),
-                libur:
+                tanggalMerah:
+                    namaTanggalMerah(
+                      DateTime(senin.year, senin.month, senin.day + i),
+                    ) !=
+                    null,
+                liburAkademik:
                     namaHariLibur(
                       DateTime(senin.year, senin.month, senin.day + i),
                     ) !=
@@ -128,6 +133,9 @@ class _JadwalPageState extends State<JadwalPage> {
     final hariIni = hariSama(_tanggalDipilih, widget.sekarang);
     final daftar = jadwalVm.jadwalUntukTanggal(_tanggalDipilih);
     final infoLibur = namaHariLibur(_tanggalDipilih);
+    final infoTanggalMerah = _tanggalDipilih.weekday == DateTime.sunday
+        ? null
+        : namaTanggalMerah(_tanggalDipilih);
 
     return Scaffold(
       appBar: AppBar(
@@ -192,8 +200,7 @@ class _JadwalPageState extends State<JadwalPage> {
               ),
             ),
           ],
-          if (infoLibur != null &&
-              _tanggalDipilih.weekday != DateTime.sunday) ...[
+          if (infoTanggalMerah != null && infoLibur == null) ...[
             Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(14),
@@ -203,11 +210,12 @@ class _JadwalPageState extends State<JadwalPage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.event_busy, color: tema.colorScheme.error),
+                  Icon(Icons.event, color: tema.colorScheme.error),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      infoLibur,
+                      'Tanggal merah: $infoTanggalMerah · '
+                      'jadwal mingguan tetap berlaku',
                       style: TextStyle(
                         color: tema.colorScheme.error,
                         fontWeight: FontWeight.w600,
@@ -251,7 +259,8 @@ class _HariStrip extends StatelessWidget {
   final DateTime tanggal;
   final bool dipilih;
   final bool hariIni;
-  final bool libur;
+  final bool tanggalMerah;
+  final bool liburAkademik;
   final bool adaJadwal;
   final VoidCallback onTap;
 
@@ -259,7 +268,8 @@ class _HariStrip extends StatelessWidget {
     required this.tanggal,
     required this.dipilih,
     required this.hariIni,
-    required this.libur,
+    required this.tanggalMerah,
+    required this.liburAkademik,
     required this.adaJadwal,
     required this.onTap,
   });
@@ -269,8 +279,10 @@ class _HariStrip extends StatelessWidget {
     final skema = Theme.of(context).colorScheme;
     final warnaAngka = dipilih
         ? Colors.white
-        : libur
+        : tanggalMerah
         ? const Color(0xFFC62828)
+        : liburAkademik
+        ? Colors.orange.shade900
         : skema.onSurface;
 
     return Material(
@@ -279,7 +291,13 @@ class _HariStrip extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: dipilih || hariIni ? skema.primary : Desain.garis,
+          color: dipilih || hariIni
+              ? skema.primary
+              : tanggalMerah
+              ? const Color(0xFFC62828)
+              : liburAkademik
+              ? Colors.orange.shade800
+              : Desain.garis,
           width: hariIni && !dipilih ? 1.5 : 1,
         ),
       ),

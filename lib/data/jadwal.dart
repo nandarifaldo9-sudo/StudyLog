@@ -10,13 +10,20 @@ const List<String> namaHari = [
   'Minggu',
 ];
 
-/// Hari libur akademik yang ditandai merah pada kalender semester terlampir.
-const Map<String, String> hariLiburAkademik = {
-  '2026-08-17': 'Hari Kemerdekaan RI',
-  '2026-08-25': 'Hari libur akademik',
-  '2026-12-24': 'Hari libur akademik',
-  '2026-12-25': 'Hari Natal',
+/// Tanggal merah nasional. Tidak otomatis membatalkan jadwal kuliah mingguan.
+const Map<String, String> tanggalMerah = {
+  '2026-08-17': 'Proklamasi Kemerdekaan',
+  '2026-08-25': 'Maulid Nabi Muhammad S.A.W',
+  '2026-12-25': 'Kelahiran Yesus Kristus',
   '2027-01-01': 'Tahun Baru Masehi',
+};
+
+/// Hari libur akademik yang tetap mengikuti jadwal mingguan.
+const Map<String, String> hariLiburAkademik = {};
+
+/// Cuti bersama pada kalender akademik.
+const Map<String, String> cutiBersama = {
+  '2026-12-24': 'Kelahiran Yesus Kristus',
 };
 
 String kunciTanggal(DateTime tanggal) =>
@@ -25,7 +32,12 @@ String kunciTanggal(DateTime tanggal) =>
     '${tanggal.day.toString().padLeft(2, '0')}';
 
 String? namaHariLibur(DateTime tanggal) =>
-    hariLiburAkademik[kunciTanggal(tanggal)] ??
+    hariLiburAkademik[kunciTanggal(tanggal)];
+
+String? namaCutiBersama(DateTime tanggal) => cutiBersama[kunciTanggal(tanggal)];
+
+String? namaTanggalMerah(DateTime tanggal) =>
+    tanggalMerah[kunciTanggal(tanggal)] ??
     (tanggal.weekday == DateTime.sunday ? 'Hari Minggu' : null);
 
 /// Satu sesi kuliah. [mulai] dan [selesai] dalam menit sejak 00:00.
@@ -57,6 +69,18 @@ class JadwalKuliah {
     mulai: json['mulai'] as int,
     selesai: json['selesai'] as int,
   );
+}
+
+/// Pengecualian satu pertemuan kelas mingguan pada tanggal tertentu.
+/// Jika [keTanggal] terisi (format yyyy-MM-dd), pertemuan itu dipindahkan;
+/// jika null, pertemuan dibatalkan.
+class PengecualianKelas {
+  final String kode;
+  final String? keTanggal;
+
+  const PengecualianKelas({required this.kode, this.keTanggal});
+
+  Map<String, Object?> toJson() => {'kode': kode, 'keTanggal': keTanggal};
 }
 
 String formatMenit(int menit) =>

@@ -135,7 +135,7 @@ class _EditorJadwalDialogState extends State<_EditorJadwalDialog> {
                     items: [
                       for (
                         var hari = DateTime.monday;
-                        hari <= DateTime.saturday;
+                        hari <= DateTime.sunday;
                         hari++
                       )
                         DropdownMenuItem(

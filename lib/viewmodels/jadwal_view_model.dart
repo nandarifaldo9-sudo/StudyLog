@@ -11,6 +11,10 @@ class JadwalViewModel extends ChangeNotifier {
 
   Map<int, List<JadwalKuliah>> _mingguan = _salinMingguan(jadwalKuliah);
   Map<String, List<JadwalKuliah>> _khususTanggal = {};
+
+  /// Kunci = tanggal asal (yyyy-MM-dd): kelas mingguan yang tidak berlangsung
+  /// pada tanggal itu (dibatalkan atau dipindahkan).
+  Map<String, List<PengecualianKelas>> _pengecualian = {};
   bool _sedangMemuat = false;
   String? _galat;
   bool _disposed = false;
@@ -46,18 +50,62 @@ class JadwalViewModel extends ChangeNotifier {
   List<JadwalKuliah> jadwalUntukHari(int hari) =>
       List.unmodifiable(_mingguan[hari] ?? const <JadwalKuliah>[]);
 
+  /// Semua kelas pada [tanggal]: mingguan (kecuali yang dikecualikan) + khusus.
   List<JadwalKuliah> jadwalUntukTanggal(DateTime tanggal) {
-    final khusus = kelasKhususUntukTanggal(tanggal);
-    if (namaHariLibur(tanggal) != null) return khusus;
-    final hasil = [...jadwalUntukHari(tanggal.weekday), ...khusus];
-    hasil.sort((a, b) => a.mulai.compareTo(b.mulai));
+    final hasil = [
+      ...mingguanBerlakuUntukTanggal(tanggal),
+      ...kelasKhususUntukTanggal(tanggal),
+    ]..sort((a, b) => a.mulai.compareTo(b.mulai));
     return List.unmodifiable(hasil);
+  }
+
+  /// Kelas mingguan yang berlaku pada [tanggal] (tanpa kelas khusus).
+  List<JadwalKuliah> mingguanBerlakuUntukTanggal(DateTime tanggal) {
+    final dikecualikan = {
+      for (final p in pengecualianUntukTanggal(tanggal)) p.kode,
+    };
+    return [
+      for (final j in jadwalUntukHari(tanggal.weekday))
+        if (!dikecualikan.contains(j.kode)) j,
+    ];
+  }
+
+  List<PengecualianKelas> pengecualianUntukTanggal(DateTime tanggal) =>
+      List.unmodifiable(
+        _pengecualian[kunciTanggal(tanggal)] ?? const <PengecualianKelas>[],
+      );
+
+  /// Kelas mingguan yang dibatalkan/dipindahkan pada [tanggal], beserta datanya.
+  List<(JadwalKuliah, PengecualianKelas)> kelasDikecualikanUntukTanggal(
+    DateTime tanggal,
+  ) {
+    final hasil = <(JadwalKuliah, PengecualianKelas)>[];
+    for (final p in pengecualianUntukTanggal(tanggal)) {
+      for (final j in jadwalUntukHari(tanggal.weekday)) {
+        if (j.kode == p.kode) hasil.add((j, p));
+      }
+    }
+    return hasil;
   }
 
   List<JadwalKuliah> kelasKhususUntukTanggal(DateTime tanggal) =>
       List.unmodifiable(
         _khususTanggal[kunciTanggal(tanggal)] ?? const <JadwalKuliah>[],
       );
+
+  /// Tanggal asal jika kelas khusus [kode] pada [tanggal] adalah hasil
+  /// pemindahan satu pertemuan mingguan; null jika bukan.
+  DateTime? asalPindahan(DateTime tanggal, String kode) {
+    final kunci = kunciTanggal(tanggal);
+    for (final entry in _pengecualian.entries) {
+      for (final p in entry.value) {
+        if (p.kode == kode && p.keTanggal == kunci) {
+          return DateTime.parse(entry.key);
+        }
+      }
+    }
+    return null;
+  }
 
   DateTime? tanggalKelasKhususBerikutnya(DateTime sekarang) {
     final hariIni = DateTime(sekarang.year, sekarang.month, sekarang.day);
@@ -97,18 +145,20 @@ class JadwalViewModel extends ChangeNotifier {
         final khusus = _bacaKelasKhususTanggal(
           decoded['kelasKhususTanggal'] ?? decoded['khususHariLibur'],
         );
+        final pengecualian = _bacaPengecualian(decoded['pengecualianTanggal']);
         _validasiMingguan(mingguan);
-        for (final entry in khusus.entries) {
-          final tanggal = DateTime.parse(entry.key);
-          final jadwalTanggal = <JadwalKuliah>[
-            if (namaHariLibur(tanggal) == null) ...mingguan[tanggal.weekday]!,
-            ...entry.value,
-          ];
-          _validasiDaftar(jadwalTanggal);
-          _validasiDaftar(entry.value);
+        _migrasikanKelasKhususYangBertabrakan(mingguan, khusus, pengecualian);
+        for (final kunci in {...khusus.keys, ...pengecualian.keys}) {
+          _validasiTanggalPada(
+            DateTime.parse(kunci),
+            mingguan,
+            khusus,
+            pengecualian,
+          );
         }
         _mingguan = mingguan;
         _khususTanggal = khusus;
+        _pengecualian = pengecualian;
       }
     } on FormatException catch (e) {
       _galat = 'Jadwal tersimpan tidak dapat dibaca: ${e.message}';
@@ -119,6 +169,35 @@ class JadwalViewModel extends ChangeNotifier {
     } finally {
       _sedangMemuat = false;
       _beritahu();
+    }
+  }
+
+  static void _migrasikanKelasKhususYangBertabrakan(
+    Map<int, List<JadwalKuliah>> mingguan,
+    Map<String, List<JadwalKuliah>> khusus,
+    Map<String, List<PengecualianKelas>> pengecualian,
+  ) {
+    for (final entry in khusus.entries) {
+      final tanggal = DateTime.parse(entry.key);
+      final daftarPengecualian = pengecualian.putIfAbsent(entry.key, () => []);
+      final daftarMingguan =
+          mingguan[tanggal.weekday] ?? const <JadwalKuliah>[];
+      for (final mingguanHari in daftarMingguan) {
+        final sudahDikecualikan = daftarPengecualian.any(
+          (item) => item.kode == mingguanHari.kode,
+        );
+        final digantikanKelasKhusus = entry.value.any(
+          (kelasKhusus) =>
+              kelasKhusus.kode == mingguanHari.kode ||
+              kelasKhusus.nama.trim() == mingguanHari.nama.trim() ||
+              (kelasKhusus.mulai < mingguanHari.selesai &&
+                  mingguanHari.mulai < kelasKhusus.selesai),
+        );
+        if (!sudahDikecualikan && digantikanKelasKhusus) {
+          daftarPengecualian.add(PengecualianKelas(kode: mingguanHari.kode));
+        }
+      }
+      if (daftarPengecualian.isEmpty) pengecualian.remove(entry.key);
     }
   }
 
@@ -153,8 +232,7 @@ class JadwalViewModel extends ChangeNotifier {
     await _simpan(mingguan, _khususTanggal);
   });
 
-  Future<void> hapusMataKuliah(int hari, String kode) =>
-      _serialkan(() async {
+  Future<void> hapusMataKuliah(int hari, String kode) => _serialkan(() async {
     _validasiHari(hari);
     final mingguan = _salinMingguan(_mingguan);
     final daftar = mingguan[hari]!;
@@ -163,30 +241,37 @@ class JadwalViewModel extends ChangeNotifier {
     if (daftar.length == jumlahAwal) {
       throw StateError('Mata kuliah tidak ditemukan pada hari tersebut.');
     }
-    await _simpan(mingguan, _khususTanggal);
+    // Pengecualian untuk mata kuliah yang sudah dihapus tidak lagi bermakna.
+    final pengecualian = _salinPengecualian(_pengecualian);
+    for (final daftarP in pengecualian.values) {
+      daftarP.removeWhere((p) => p.kode == kode);
+    }
+    pengecualian.removeWhere((_, daftarP) => daftarP.isEmpty);
+    await _simpan(mingguan, _khususTanggal, pengecualian);
   });
 
-  Future<void> tambahKelasPadaTanggal(
+  Future<void> tambahKelasPadaTanggal(DateTime tanggal, JadwalKuliah jadwal) =>
+      _serialkan(() async {
+        final khusus = _salinKhusus(_khususTanggal);
+        final daftar = khusus.putIfAbsent(kunciTanggal(tanggal), () => []);
+        if (daftar.any((item) => item.kode == jadwal.kode)) {
+          throw ArgumentError(
+            'Kode mata kuliah sudah digunakan pada tanggal ini.',
+          );
+        }
+        daftar.add(jadwal);
+        _validasiDaftar(daftar);
+        _validasiTanggalPada(tanggal, _mingguan, khusus, _pengecualian);
+        await _simpan(_mingguan, khusus);
+      });
+
+  Future<void> hapusKelasPadaTanggal(
     DateTime tanggal,
-    JadwalKuliah jadwal,
+    String kode,
   ) => _serialkan(() async {
     final khusus = _salinKhusus(_khususTanggal);
-    final daftar = khusus.putIfAbsent(kunciTanggal(tanggal), () => []);
-    if (daftar.any((item) => item.kode == jadwal.kode)) {
-      throw ArgumentError('Kode mata kuliah sudah digunakan pada tanggal ini.');
-    }
-    daftar.add(jadwal);
-    _validasiDaftar(daftar);
-    if (namaHariLibur(tanggal) == null) {
-      _validasiDaftar([...jadwalUntukHari(tanggal.weekday), ...daftar]);
-    }
-    await _simpan(_mingguan, khusus);
-  });
-
-  Future<void> hapusKelasPadaTanggal(DateTime tanggal, String kode) =>
-      _serialkan(() async {
-    final khusus = _salinKhusus(_khususTanggal);
-    final daftar = khusus[kunciTanggal(tanggal)];
+    final kunci = kunciTanggal(tanggal);
+    final daftar = khusus[kunci];
     if (daftar == null) {
       throw StateError('Kelas khusus tidak ditemukan pada tanggal tersebut.');
     }
@@ -195,8 +280,94 @@ class JadwalViewModel extends ChangeNotifier {
     if (daftar.length == jumlahAwal) {
       throw StateError('Kelas khusus tidak ditemukan pada tanggal tersebut.');
     }
-    if (daftar.isEmpty) khusus.remove(kunciTanggal(tanggal));
-    await _simpan(_mingguan, khusus);
+    if (daftar.isEmpty) khusus.remove(kunci);
+
+    // Jika ini kelas hasil pemindahan, pertemuan asalnya menjadi "dibatalkan".
+    final pengecualian = _salinPengecualian(_pengecualian);
+    for (final daftarP in pengecualian.values) {
+      for (var i = 0; i < daftarP.length; i++) {
+        if (daftarP[i].kode == kode && daftarP[i].keTanggal == kunci) {
+          daftarP[i] = PengecualianKelas(kode: kode);
+        }
+      }
+    }
+    await _simpan(_mingguan, khusus, pengecualian);
+  });
+
+  /// Memindahkan SATU pertemuan kelas mingguan (hanya pada [dariTanggal])
+  /// ke [keTanggal] dengan jam baru. Jadwal mingguan tidak berubah.
+  Future<void> pindahkanKelasSekali({
+    required DateTime dariTanggal,
+    required String kode,
+    required DateTime keTanggal,
+    required int mulai,
+    required int selesai,
+  }) => _serialkan(() async {
+    final asli = _kelasMingguanDi(dariTanggal, kode);
+    if (selesai <= mulai) {
+      throw ArgumentError('Jam selesai harus setelah jam mulai.');
+    }
+    final tujuan = kunciTanggal(keTanggal);
+    final pengecualian = _salinPengecualian(_pengecualian);
+    pengecualian
+        .putIfAbsent(kunciTanggal(dariTanggal), () => [])
+        .add(PengecualianKelas(kode: kode, keTanggal: tujuan));
+    final khusus = _salinKhusus(_khususTanggal);
+    final daftar = khusus.putIfAbsent(tujuan, () => []);
+    if (daftar.any((item) => item.kode == kode)) {
+      throw ArgumentError(
+        'Mata kuliah ini sudah terjadwal pada tanggal tersebut.',
+      );
+    }
+    daftar.add(
+      JadwalKuliah(
+        kode: asli.kode,
+        nama: asli.nama,
+        mulai: mulai,
+        selesai: selesai,
+      ),
+    );
+    _validasiTanggalBaru(keTanggal, khusus, pengecualian);
+    await _simpan(_mingguan, khusus, pengecualian);
+  });
+
+  /// Membatalkan SATU pertemuan kelas mingguan pada [tanggal] saja.
+  Future<void> batalkanKelasSekali({
+    required DateTime tanggal,
+    required String kode,
+  }) => _serialkan(() async {
+    _kelasMingguanDi(tanggal, kode);
+    final pengecualian = _salinPengecualian(_pengecualian);
+    pengecualian
+        .putIfAbsent(kunciTanggal(tanggal), () => [])
+        .add(PengecualianKelas(kode: kode));
+    await _simpan(_mingguan, _khususTanggal, pengecualian);
+  });
+
+  /// Mengembalikan pertemuan yang dibatalkan/dipindahkan ke keadaan semula.
+  Future<void> kembalikanKelas({
+    required DateTime tanggal,
+    required String kode,
+  }) => _serialkan(() async {
+    final kunci = kunciTanggal(tanggal);
+    final pengecualian = _salinPengecualian(_pengecualian);
+    final daftar = pengecualian[kunci];
+    final indeks = daftar?.indexWhere((p) => p.kode == kode) ?? -1;
+    if (daftar == null || indeks == -1) {
+      throw StateError('Pengecualian tidak ditemukan pada tanggal tersebut.');
+    }
+    final catatan = daftar.removeAt(indeks);
+    if (daftar.isEmpty) pengecualian.remove(kunci);
+
+    final khusus = _salinKhusus(_khususTanggal);
+    final tujuan = catatan.keTanggal;
+    if (tujuan != null) {
+      final daftarTujuan = khusus[tujuan];
+      daftarTujuan?.removeWhere((j) => j.kode == kode);
+      if (daftarTujuan != null && daftarTujuan.isEmpty) khusus.remove(tujuan);
+    }
+    _validasiTanggalBaru(tanggal, khusus, pengecualian);
+    await _simpan(_mingguan, khusus, pengecualian);
   });
 
   Future<void> tambahKelasHariLibur(DateTime tanggal, JadwalKuliah jadwal) =>
@@ -208,13 +379,24 @@ class JadwalViewModel extends ChangeNotifier {
   List<JadwalKuliah> jadwalKhususHariLibur(DateTime tanggal) =>
       kelasKhususUntukTanggal(tanggal);
 
+  JadwalKuliah _kelasMingguanDi(DateTime tanggal, String kode) {
+    for (final j in mingguanBerlakuUntukTanggal(tanggal)) {
+      if (j.kode == kode) return j;
+    }
+    throw StateError(
+      'Mata kuliah mingguan tidak ditemukan pada tanggal tersebut.',
+    );
+  }
+
   Future<void> _simpan(
     Map<int, List<JadwalKuliah>> mingguan,
-    Map<String, List<JadwalKuliah>> khusus,
-  ) async {
+    Map<String, List<JadwalKuliah>> khusus, [
+    Map<String, List<PengecualianKelas>>? pengecualian,
+  ]) async {
     if (_galat != null) {
       throw StateError('Jadwal harus berhasil dimuat sebelum diubah.');
     }
+    final kecuali = pengecualian ?? _pengecualian;
     final prefs = await SharedPreferences.getInstance();
     final berhasil = await prefs.setString(
       _kunciPenyimpanan,
@@ -227,11 +409,16 @@ class JadwalViewModel extends ChangeNotifier {
           for (final entry in khusus.entries)
             entry.key: [for (final jadwal in entry.value) jadwal.toJson()],
         },
+        'pengecualianTanggal': {
+          for (final entry in kecuali.entries)
+            entry.key: [for (final p in entry.value) p.toJson()],
+        },
       }),
     );
     if (!berhasil) throw StateError('Jadwal gagal disimpan ke perangkat.');
     _mingguan = mingguan;
     _khususTanggal = khusus;
+    _pengecualian = kecuali;
     _galat = null;
     _beritahu();
   }
@@ -271,6 +458,39 @@ class JadwalViewModel extends ChangeNotifier {
     return result;
   }
 
+  /// Data lama tidak punya kunci ini, jadi null dianggap kosong.
+  static Map<String, List<PengecualianKelas>> _bacaPengecualian(Object? value) {
+    if (value == null) return {};
+    if (value is! Map<String, dynamic>) {
+      throw const FormatException('Daftar pengecualian jadwal tidak valid.');
+    }
+    final hasil = <String, List<PengecualianKelas>>{};
+    for (final entry in value.entries) {
+      final tanggal = DateTime.tryParse(entry.key);
+      if (tanggal == null || kunciTanggal(tanggal) != entry.key) {
+        throw FormatException('Tanggal pengecualian ${entry.key} tidak valid.');
+      }
+      final raw = entry.value;
+      if (raw is! List) {
+        throw FormatException('Pengecualian ${entry.key} tidak valid.');
+      }
+      hasil[entry.key] = [for (final item in raw) _bacaPengecualianItem(item)];
+    }
+    return hasil;
+  }
+
+  static PengecualianKelas _bacaPengecualianItem(Object? item) {
+    if (item is! Map<String, dynamic>) {
+      throw const FormatException('Data pengecualian tidak valid.');
+    }
+    final kode = item['kode'];
+    final ke = item['keTanggal'];
+    if (kode is! String || (ke != null && ke is! String)) {
+      throw const FormatException('Data pengecualian tidak valid.');
+    }
+    return PengecualianKelas(kode: kode, keTanggal: ke as String?);
+  }
+
   static JadwalKuliah _bacaJadwal(Object? value) {
     if (value is! Map<String, dynamic>) {
       throw const FormatException('Data mata kuliah tidak valid.');
@@ -292,6 +512,13 @@ class JadwalViewModel extends ChangeNotifier {
       entry.key: List<JadwalKuliah>.of(entry.value),
   };
 
+  static Map<String, List<PengecualianKelas>> _salinPengecualian(
+    Map<String, List<PengecualianKelas>> source,
+  ) => {
+    for (final entry in source.entries)
+      entry.key: List<PengecualianKelas>.of(entry.value),
+  };
+
   static void _urutkanMingguan(Map<int, List<JadwalKuliah>> mingguan) {
     for (final daftar in mingguan.values) {
       daftar.sort((a, b) => a.mulai.compareTo(b.mulai));
@@ -307,6 +534,48 @@ class JadwalViewModel extends ChangeNotifier {
           throw const FormatException('Kode mata kuliah duplikat.');
         }
       }
+    }
+  }
+
+  /// Memeriksa seluruh kelas pada satu tanggal: mingguan (tanpa yang
+  /// dikecualikan) digabung dengan kelas khusus. Melempar FormatException.
+  static void _validasiTanggalPada(
+    DateTime tanggal,
+    Map<int, List<JadwalKuliah>> mingguan,
+    Map<String, List<JadwalKuliah>> khusus,
+    Map<String, List<PengecualianKelas>> pengecualian,
+  ) {
+    final kunci = kunciTanggal(tanggal);
+    final dikecualikan = {
+      for (final p in pengecualian[kunci] ?? const <PengecualianKelas>[])
+        p.kode,
+    };
+    final daftar = <JadwalKuliah>[
+      for (final j in mingguan[tanggal.weekday] ?? const <JadwalKuliah>[])
+        if (!dikecualikan.contains(j.kode)) j,
+      ...?khusus[kunci],
+    ];
+    _validasiDaftar(daftar);
+  }
+
+  /// Sama seperti [_validasiTanggalPada], tetapi galatnya berupa
+  /// ArgumentError dengan pesan yang mudah dibaca pengguna.
+  void _validasiTanggalBaru(
+    DateTime tanggal,
+    Map<String, List<JadwalKuliah>> khusus,
+    Map<String, List<PengecualianKelas>> pengecualian,
+  ) {
+    try {
+      _validasiTanggalPada(tanggal, _mingguan, khusus, pengecualian);
+    } on FormatException catch (e) {
+      final pesan = e.message;
+      throw ArgumentError(
+        pesan.contains('duplikat')
+            ? 'Mata kuliah ini sudah terjadwal pada tanggal tersebut.'
+            : pesan.contains('bertabrakan')
+            ? 'Jam bertabrakan dengan mata kuliah lain pada tanggal tersebut.'
+            : pesan,
+      );
     }
   }
 
@@ -340,11 +609,11 @@ class JadwalViewModel extends ChangeNotifier {
   }
 
   static void _validasiHari(int hari) {
-    if (hari < DateTime.monday || hari > DateTime.saturday) {
+    if (hari < DateTime.monday || hari > DateTime.sunday) {
       throw ArgumentError.value(
         hari,
         'hari',
-        'Jadwal mingguan berlaku Senin-Sabtu.',
+        'Jadwal mingguan berlaku Senin-Minggu.',
       );
     }
   }

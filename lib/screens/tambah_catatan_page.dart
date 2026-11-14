@@ -123,11 +123,7 @@ class _TambahCatatanPageState extends State<TambahCatatanPage> {
     );
   }
 
-  Future<void> _simpanDraftKonten(
-    String mataKuliah,
-    String judul,
-    String isi,
-  ) {
+  Future<void> _simpanDraftKonten(String mataKuliah, String judul, String isi) {
     final operasi = _antrianDraft.then((_) async {
       final prefs = await SharedPreferences.getInstance();
       final judulTersimpan = await prefs.setString(
@@ -306,6 +302,8 @@ class _TambahCatatanPageState extends State<TambahCatatanPage> {
     final jadwalTanggal = jadwalViewModel.jadwalUntukTanggal(_waktuCatatan);
     final jadwalTerpilih = jadwalTanggal.where((j) => j.nama == _mataKuliah);
     final infoLibur = namaHariLibur(_waktuCatatan);
+    final infoCuti = namaCutiBersama(_waktuCatatan);
+    final infoTanggalMerah = namaTanggalMerah(_waktuCatatan);
 
     return PopScope(
       canPop: !_sedangMenyimpan,
@@ -320,132 +318,150 @@ class _TambahCatatanPageState extends State<TambahCatatanPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              if (_mengubah)
-                Text(
-                  widget.catatanAwal!.mataKuliah,
-                  style: Theme.of(context).textTheme.titleMedium,
-                )
-              else ...[
-                _pilihTanggalDanWaktu(),
-                if (infoLibur != null) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Chip(
-                      avatar: Icon(
-                        Icons.event_busy,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.error,
+                if (_mengubah)
+                  Text(
+                    widget.catatanAwal!.mataKuliah,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  )
+                else ...[
+                  _pilihTanggalDanWaktu(),
+                  if (infoLibur != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        avatar: Icon(
+                          Icons.event_busy,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        label: Text('Hari libur akademik: $infoLibur'),
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .errorContainer,
+                        side: BorderSide.none,
                       ),
-                      label: Text(infoLibur),
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.errorContainer,
-                      side: BorderSide.none,
+                    ),
+                  ],
+                  if (infoCuti != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        avatar: const Icon(Icons.event_available, size: 18),
+                        label: Text('Cuti bersama: $infoCuti'),
+                      ),
+                    ),
+                  ],
+                  if (infoTanggalMerah != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        avatar: const Icon(Icons.event, size: 18),
+                        label: Text('Tanggal merah: $infoTanggalMerah'),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(_mataKuliah),
+                    initialValue: _mataKuliah,
+                    decoration: const InputDecoration(labelText: 'Mata kuliah'),
+                    items: [
+                      for (final jadwal in jadwalTanggal)
+                        DropdownMenuItem(
+                          value: jadwal.nama,
+                          child: Text(jadwal.nama),
+                        ),
+                    ],
+                    onChanged: _sedangMenyimpan || jadwalViewModel.sedangMemuat
+                        ? null
+                        : _gantiMataKuliah,
+                    validator: (nilai) => nilai == null
+                        ? 'Tidak ada jadwal pada tanggal ini'
+                        : null,
+                  ),
+                  if (jadwalTanggal.isEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text('Belum ada mata kuliah pada tanggal ini.'),
+                  ],
+                  if (jadwalTerpilih.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('Jadwal: ${jadwalTerpilih.first.jamTeks}'),
+                  ],
+                ],
+                if (widget.jam != null && _mengubah) ...[
+                  const SizedBox(height: 4),
+                  Text(widget.jam!),
+                ],
+                if (_draftDipulihkan) ...[
+                  const SizedBox(height: 8),
+                  const Text('Draft dipulihkan'),
+                ],
+                if (_galat != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _galat!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ],
+                if (catatanViewModel.galat != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    catatanViewModel.galat!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: catatanViewModel.sedangMemuat
+                        ? null
+                        : catatanViewModel.muat,
+                    child: const Text('Coba muat ulang'),
+                  ),
+                ],
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  key: ValueKey(_mataKuliah),
-                  initialValue: _mataKuliah,
+                TextFormField(
+                  controller: _judulController,
+                  enabled: !_sedangMenyimpan,
+                  decoration: const InputDecoration(labelText: 'Judul catatan'),
+                  textInputAction: TextInputAction.next,
+                  validator: (nilai) =>
+                      _validasiWajib(nilai, 'Judul catatan wajib diisi'),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _isiController,
+                  enabled: !_sedangMenyimpan,
                   decoration: const InputDecoration(
-                    labelText: 'Mata kuliah',
+                    labelText: 'Isi catatan',
+                    alignLabelWithHint: true,
                   ),
-                  items: [
-                    for (final jadwal in jadwalTanggal)
-                      DropdownMenuItem(
-                        value: jadwal.nama,
-                        child: Text(jadwal.nama),
-                      ),
-                  ],
-                  onChanged: _sedangMenyimpan || jadwalViewModel.sedangMemuat
-                      ? null
-                      : _gantiMataKuliah,
-                  validator: (nilai) => nilai == null
-                      ? 'Tidak ada jadwal pada tanggal ini'
-                      : null,
+                  minLines: 5,
+                  maxLines: 10,
+                  validator: (nilai) =>
+                      _validasiWajib(nilai, 'Isi catatan wajib diisi'),
                 ),
-                if (jadwalTanggal.isEmpty) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Belum ada mata kuliah pada tanggal ini.',
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed:
+                      _sedangMenyimpan ||
+                          jadwalViewModel.sedangMemuat ||
+                          catatanViewModel.sedangMemuat ||
+                          catatanViewModel.galat != null
+                      ? null
+                      : _simpan,
+                  child: Text(
+                    _sedangMenyimpan
+                        ? 'Menyimpan...'
+                        : _mengubah
+                        ? 'Simpan perubahan'
+                        : 'Simpan',
                   ),
-                ],
-                if (jadwalTerpilih.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('Jadwal: ${jadwalTerpilih.first.jamTeks}'),
-                ],
-              ],
-              if (widget.jam != null && _mengubah) ...[
-                const SizedBox(height: 4),
-                Text(widget.jam!),
-              ],
-              if (_draftDipulihkan) ...[
-                const SizedBox(height: 8),
-                const Text('Draft dipulihkan'),
-              ],
-              if (_galat != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  _galat!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              ],
-              if (catatanViewModel.galat != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  catatanViewModel.galat!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                TextButton(
-                  onPressed: catatanViewModel.sedangMemuat
-                      ? null
-                      : catatanViewModel.muat,
-                  child: const Text('Coba muat ulang'),
-                ),
-              ],
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _judulController,
-                enabled: !_sedangMenyimpan,
-                decoration: const InputDecoration(
-                  labelText: 'Judul catatan',
-                ),
-                textInputAction: TextInputAction.next,
-                validator: (nilai) =>
-                    _validasiWajib(nilai, 'Judul catatan wajib diisi'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _isiController,
-                enabled: !_sedangMenyimpan,
-                decoration: const InputDecoration(
-                  labelText: 'Isi catatan',
-                  alignLabelWithHint: true,
-                ),
-                minLines: 5,
-                maxLines: 10,
-                validator: (nilai) =>
-                    _validasiWajib(nilai, 'Isi catatan wajib diisi'),
-              ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed:
-                    _sedangMenyimpan ||
-                        jadwalViewModel.sedangMemuat ||
-                        catatanViewModel.sedangMemuat ||
-                        catatanViewModel.galat != null
-                    ? null
-                    : _simpan,
-                child: Text(
-                  _sedangMenyimpan
-                      ? 'Menyimpan...'
-                      : _mengubah
-                      ? 'Simpan perubahan'
-                      : 'Simpan',
-                ),
-              ),
               ],
             ),
           ),

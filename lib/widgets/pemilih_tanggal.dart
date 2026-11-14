@@ -46,15 +46,20 @@ class _DialogKalenderAkademikState extends State<_DialogKalenderAkademik> {
     if (tanggal == null) return const SizedBox.expand();
     final tema = Theme.of(context);
     final libur = namaHariLibur(tanggal);
+    final cuti = namaCutiBersama(tanggal);
+    final namaMerah = namaTanggalMerah(tanggal);
     final dipilih = hariSama(tanggal, _terpilih);
     final hariIni = hariSama(tanggal, widget.sekarang);
-    final merah = libur != null;
+    final merah = namaMerah != null;
+    final hariLibur = libur != null || cuti != null;
 
     return Semantics(
       button: true,
       label:
           '${tanggal.day} ${namaBulan[tanggal.month - 1]} ${tanggal.year}'
-          '${libur == null ? '' : ', $libur'}',
+          '${libur != null ? ', Hari libur akademik: $libur' : ''}'
+          '${cuti != null ? ', Cuti bersama: $cuti' : ''}'
+          '${namaMerah != null ? ', Tanggal merah: $namaMerah' : ''}',
       child: InkWell(
         key: Key('tanggal_${kunciTanggal(tanggal)}'),
         customBorder: const CircleBorder(),
@@ -67,9 +72,14 @@ class _DialogKalenderAkademikState extends State<_DialogKalenderAkademik> {
                 ? tema.colorScheme.primary
                 : merah
                 ? const Color(0xFFFFE0E0)
+                : hariLibur
+                ? const Color(0xFFFFF1D6)
                 : null,
-            border: merah && dipilih
-                ? Border.all(color: Colors.red.shade700, width: 2)
+            border: (merah || hariLibur) && dipilih
+                ? Border.all(
+                    color: merah ? Colors.red.shade700 : Colors.orange.shade800,
+                    width: 2,
+                  )
                 : hariIni
                 ? Border.all(color: tema.colorScheme.primary)
                 : null,
@@ -82,8 +92,10 @@ class _DialogKalenderAkademikState extends State<_DialogKalenderAkademik> {
                   ? tema.colorScheme.onPrimary
                   : merah
                   ? Colors.red.shade800
+                  : hariLibur
+                  ? Colors.orange.shade900
                   : null,
-              fontWeight: dipilih || merah || hariIni
+              fontWeight: dipilih || merah || hariLibur || hariIni
                   ? FontWeight.bold
                   : FontWeight.normal,
             ),
@@ -105,7 +117,9 @@ class _DialogKalenderAkademikState extends State<_DialogKalenderAkademik> {
     ).day;
     final offset = hariPertama.weekday - DateTime.monday;
     final jumlahSel = ((offset + jumlahHari + 6) ~/ 7) * 7;
-    final namaLiburTerpilih = namaHariLibur(_terpilih);
+    final liburAkademikTerpilih = namaHariLibur(_terpilih);
+    final cutiBersamaTerpilih = namaCutiBersama(_terpilih);
+    final tanggalMerahTerpilih = namaTanggalMerah(_terpilih);
     final batasBulanSebelumnya =
         _bulanTampil.year == 1900 && _bulanTampil.month == DateTime.january;
     final batasBulanBerikutnya =
@@ -183,31 +197,38 @@ class _DialogKalenderAkademikState extends State<_DialogKalenderAkademik> {
                 },
               ),
             ),
-            Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFE0E0),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Expanded(child: Text('Tanggal merah: hari libur')),
-              ],
-            ),
-            if (namaLiburTerpilih != null) ...[
+            if (liburAkademikTerpilih != null ||
+                cutiBersamaTerpilih != null ||
+                tanggalMerahTerpilih != null) ...[
               const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  namaLiburTerpilih,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (liburAkademikTerpilih != null)
+                    Text(
+                      'Hari libur akademik: $liburAkademikTerpilih',
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (cutiBersamaTerpilih != null)
+                    Text(
+                      'Cuti bersama: $cutiBersamaTerpilih',
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (tanggalMerahTerpilih != null)
+                    Text(
+                      'Tanggal merah: $tanggalMerahTerpilih',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
               ),
             ],
           ],
