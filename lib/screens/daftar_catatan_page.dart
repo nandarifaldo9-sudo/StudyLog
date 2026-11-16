@@ -60,67 +60,6 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
     );
   }
 
-  Widget _chipFilter({
-    required String label,
-    required int jumlah,
-    required Color warna,
-    required bool dipilih,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        key: Key('filter_$label'),
-        label: Text('$label ($jumlah)'),
-        selected: dipilih,
-        showCheckmark: false,
-        shape: const StadiumBorder(),
-        selectedColor: warna.withAlpha(36),
-        backgroundColor: Colors.white,
-        side: BorderSide(color: dipilih ? warna : Desain.garis),
-        labelStyle: TextStyle(
-          color: dipilih ? warna : Desain.teksRedup,
-          fontWeight: dipilih ? FontWeight.w700 : FontWeight.w500,
-          fontSize: 13,
-        ),
-        onSelected: (_) => onTap(),
-      ),
-    );
-  }
-
-  Widget _barisFilter(CatatanViewModel vm, JadwalViewModel jadwalViewModel) {
-    final mataKuliah = {
-      ...warnaMataKuliah.keys,
-      ...jadwalViewModel.semuaMataKuliah,
-      ...vm.semua.map((catatan) => catatan.mataKuliah),
-    };
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        key: const Key('filterScroll'),
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _chipFilter(
-            label: 'Semua',
-            jumlah: vm.jumlah,
-            warna: Theme.of(context).colorScheme.primary,
-            dipilih: _mataKuliah == null,
-            onTap: () => setState(() => _mataKuliah = null),
-          ),
-          for (final mk in mataKuliah)
-            _chipFilter(
-              label: mk,
-              jumlah: vm.jumlahUntuk(mk),
-              warna: warnaUntuk(mk),
-              dipilih: _mataKuliah == mk,
-              onTap: () => setState(() => _mataKuliah = mk),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _pesan(String teks) =>
       KeadaanKosong(ikon: Icons.sticky_note_2_outlined, judul: teks);
 
@@ -208,7 +147,6 @@ class _DaftarCatatanPageState extends State<DaftarCatatanPage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: _kolomPencarian(),
           ),
-          _barisFilter(vm, jadwalViewModel),
           if (adaFilter && hasil.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

@@ -316,33 +316,6 @@ class _KelolaJadwalPageState extends State<KelolaJadwalPage> {
     ),
   );
 
-  Widget _kartuKhusus(JadwalViewModel vm, JadwalKuliah jadwal) {
-    final asal = vm.asalPindahan(_tanggal, jadwal.kode);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(
-          asal == null ? Icons.event_available : Icons.drive_file_move_outline,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        title: Text(jadwal.nama),
-        subtitle: Text(
-          asal == null
-              ? '${jadwal.kode} • ${jadwal.jamTeks}'
-              : '${jadwal.kode} • ${jadwal.jamTeks}\n'
-                    'Pindahan dari ${formatTanggalPendek(asal)}',
-        ),
-        isThreeLine: asal != null,
-        trailing: IconButton(
-          key: Key('hapusTanggal_${jadwal.kode}'),
-          tooltip: 'Hapus dari tanggal ini',
-          onPressed: () => _hapusUntukTanggal(jadwal),
-          icon: const Icon(Icons.delete_outline),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<JadwalViewModel>();
@@ -512,19 +485,6 @@ class _KelolaJadwalPageState extends State<KelolaJadwalPage> {
                 for (final (jadwal, pengecualian) in dikecualikan)
                   _kartuDikecualikan(vm, jadwal, pengecualian),
               ],
-              _judulBagian(
-                ikon: Icons.event_available,
-                judul: 'Kelas khusus tanggal ini',
-                jumlah: khusus.length,
-              ),
-              if (khusus.isEmpty)
-                _kartuKosong(
-                  ikon: Icons.add_circle_outline,
-                  judul: 'Belum ada kelas khusus',
-                  deskripsi: 'Tambahan hanya berlaku pada tanggal ini.',
-                )
-              else
-                for (final jadwal in khusus) _kartuKhusus(vm, jadwal),
             ],
           ],
         ],
